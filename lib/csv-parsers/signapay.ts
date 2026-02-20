@@ -11,7 +11,8 @@ export function parseSignaPay(csvText: string): CSVParseResult {
     return { records, errors: ["File appears to be empty"], totalVolume: 0, totalNet: 0 };
   }
 
-  const headerIdx = findHeaderRow(rows, ["dba", "mid", "sales amount", "total net revenue"]);
+  // Support both SignaPay CSV columns and portal xlsx columns
+  const headerIdx = findHeaderRow(rows, ["dba", "mid"]);
   const colMap = createColumnMap(rows[headerIdx]);
 
   for (let i = headerIdx + 1; i < rows.length; i++) {
@@ -22,10 +23,11 @@ export function parseSignaPay(csvText: string): CSVParseResult {
 
       if (!dba && !mid) continue; // Skip empty rows
 
-      const volume = safeParseCurrency(getColAny(row, colMap, ["sales amount"]));
-      const salesCount = safeParseInt(getColAny(row, colMap, ["sales count"]));
-      const netRevenue = safeParseCurrency(getColAny(row, colMap, ["total net revenue", "agent net revenue"]));
-      const agentName = getColAny(row, colMap, ["sub agent name"]);
+      const volume = safeParseCurrency(getColAny(row, colMap, ["sales amount", "volume"]));
+      const salesCount = safeParseInt(getColAny(row, colMap, ["sales count", "transactions"]));
+      const netRevenue = safeParseCurrency(getColAny(row, colMap, ["total net revenue", "agent net revenue", "total net", "net"]));
+      const income = safeParseCurrency(getColAny(row, colMap, ["income", "sales amount", "volume"]));
+      const agentName = getColAny(row, colMap, ["sub agent name", "agent"]);
       const status = getColAny(row, colMap, ["dba status"]);
       const splitStr = getColAny(row, colMap, ["agent split"]);
       const splitPercent = safeParsePercent(splitStr);
@@ -45,7 +47,7 @@ export function parseSignaPay(csvText: string): CSVParseResult {
         dba,
         agentName: agentName || undefined,
         volume,
-        income: safeParseCurrency(getColAny(row, colMap, ["sales amount"])),
+        income,
         netCommission: netRevenue,
         transactions: salesCount,
         splitPercent,

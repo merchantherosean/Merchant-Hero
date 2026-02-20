@@ -2,8 +2,20 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { parseCSV } from "@/lib/csv-parsers";
 import type { Processor } from "@/lib/types";
+import * as XLSX from "xlsx";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * Convert an xlsx/xls file buffer into CSV text.
+ * Takes the first sheet and outputs standard CSV.
+ */
+function xlsxToCSV(buffer: ArrayBuffer): string {
+  const workbook = XLSX.read(buffer, { type: "array" });
+  const sheetName = workbook.SheetNames[0];
+  const sheet = workbook.Sheets[sheetName];
+  return XLSX.utils.sheet_to_csv(sheet);
+}
 
 export async function POST(req: Request) {
   try {
@@ -20,7 +32,16 @@ export async function POST(req: Request) {
       );
     }
 
-    const csvText = await file.text();
+    // Handle both CSV and xlsx/xls files
+    let csvText: string;
+    const fileName = file.name.toLowerCase();
+    if (fileName.endsWith(".xlsx") || fileName.endsWith(".xls")) {
+      const buffer = await file.arrayBuffer();
+      csvText = xlsxToCSV(buffer);
+    } else {
+      csvText = await file.text();
+    }
+
     const result = parseCSV(csvText, processor);
 
     if (result.records.length === 0) {

@@ -9,7 +9,7 @@ interface FileUploadProps {
   accept?: string;
 }
 
-export default function FileUpload({ onUpload, uploading = false, accept = ".csv" }: FileUploadProps) {
+export default function FileUpload({ onUpload, uploading = false, accept = ".csv,.xlsx,.xls" }: FileUploadProps) {
   const [dragOver, setDragOver] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -19,7 +19,8 @@ export default function FileUpload({ onUpload, uploading = false, accept = ".csv
       e.preventDefault();
       setDragOver(false);
       const file = e.dataTransfer.files[0];
-      if (file && file.name.endsWith(".csv")) {
+      const name = file?.name.toLowerCase() || "";
+      if (file && (name.endsWith(".csv") || name.endsWith(".xlsx") || name.endsWith(".xls"))) {
         setSelectedFile(file);
       }
     },
@@ -68,10 +69,10 @@ export default function FileUpload({ onUpload, uploading = false, accept = ".csv
         />
         <Upload size={24} className="mx-auto mb-2" style={{ color: "var(--text-muted)" }} />
         <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
-          Drag and drop a CSV file here, or <span style={{ color: "#7c6aef" }}>browse</span>
+          Drag and drop a file here, or <span style={{ color: "#7c6aef" }}>browse</span>
         </p>
         <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
-          Supports CSV files from SignaPay, Fiserv, Transaction Company, and Maverick
+          Supports CSV and Excel (.xlsx) files from SignaPay, Fiserv, Transaction Company, and Maverick
         </p>
       </div>
 

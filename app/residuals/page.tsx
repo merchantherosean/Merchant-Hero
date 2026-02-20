@@ -111,7 +111,7 @@ export default function ResidualsPage() {
           Residuals
         </h1>
         <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-          Upload monthly processor CSVs and view residual data
+          Upload monthly processor files (CSV or Excel) and view residual data
         </p>
       </div>
 
