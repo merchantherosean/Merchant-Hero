@@ -3,7 +3,7 @@ export type Processor = "signapay" | "fiserv" | "tsys" | "maverick";
 export const PROCESSOR_LABELS: Record<Processor, string> = {
   signapay: "SignaPay",
   fiserv: "Fiserv / Green Payments",
-  tsys: "Transaction Company",
+  tsys: "TRNXN Company",
   maverick: "Maverick",
 };
 

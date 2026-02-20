@@ -72,7 +72,7 @@ export default function FileUpload({ onUpload, uploading = false, accept = ".csv
           Drag and drop a file here, or <span style={{ color: "#7c6aef" }}>browse</span>
         </p>
         <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
-          Supports CSV and Excel (.xlsx) files from SignaPay, Fiserv, Transaction Company, and Maverick
+          Supports CSV and Excel (.xlsx) files from SignaPay, Fiserv, TRNXN Company, and Maverick
         </p>
       </div>
 

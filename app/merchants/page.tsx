@@ -318,7 +318,7 @@ export default function MerchantsPage() {
           <option value="all">All Processors</option>
           <option value="signapay">SignaPay</option>
           <option value="fiserv">Fiserv / Green Payments</option>
-          <option value="tsys">Transaction Company</option>
+          <option value="tsys">TRNXN Company</option>
           <option value="maverick">Maverick</option>
         </select>
       </div>

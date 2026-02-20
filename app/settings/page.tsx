@@ -132,7 +132,7 @@ export default function SettingsPage() {
           </div>
           <div className="flex justify-between">
             <span className="text-sm" style={{ color: "var(--text-secondary)" }}>Processors</span>
-            <span className="text-sm" style={{ color: "var(--text-primary)" }}>SignaPay, Fiserv, TSYS, Maverick</span>
+            <span className="text-sm" style={{ color: "var(--text-primary)" }}>SignaPay, Fiserv, TRNXN, Maverick</span>
           </div>
         </div>
       </div>
