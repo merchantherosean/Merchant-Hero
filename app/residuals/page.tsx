@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { DollarSign, Upload, CheckCircle, AlertCircle } from "lucide-react";
+import { DollarSign, Upload, CheckCircle, AlertCircle, Trash2 } from "lucide-react";
 import FileUpload from "@/components/FileUpload";
 import { PROCESSOR_LABELS, PROCESSORS, MONTHS, type Processor, type UploadResponse } from "@/lib/types";
 import { formatCurrency, formatNumber } from "@/lib/formatters";
@@ -44,6 +44,8 @@ export default function ResidualsPage() {
   const [viewProcessor, setViewProcessor] = useState<string>("all");
   const [viewYear, setViewYear] = useState(currentDate.getFullYear());
   const [viewMonth, setViewMonth] = useState(currentDate.getMonth() + 1);
+  const [deleteUpload, setDeleteUpload] = useState<UploadRecord | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchResiduals = useCallback(() => {
     setLoading(true);
@@ -99,6 +101,22 @@ export default function ResidualsPage() {
       });
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleDeleteUpload = async () => {
+    if (!deleteUpload) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/residuals/upload/${deleteUpload.id}`, { method: "DELETE" });
+      if (res.ok) {
+        fetchResiduals();
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setDeleting(false);
+      setDeleteUpload(null);
     }
   };
 
@@ -274,9 +292,17 @@ export default function ResidualsPage() {
             {uploads.map((u) => (
               <div
                 key={u.id}
-                className="p-3 rounded-lg border"
+                className="p-3 rounded-lg border relative group"
                 style={{ background: "var(--bg-primary)", borderColor: "var(--border)" }}
               >
+                <button
+                  onClick={() => setDeleteUpload(u)}
+                  className="absolute top-2 right-2 p-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500/10"
+                  style={{ color: "#ef4444" }}
+                  title="Delete upload"
+                >
+                  <Trash2 size={13} />
+                </button>
                 <p className="text-sm font-medium mb-1" style={{ color: "var(--text-primary)" }}>
                   {PROCESSOR_LABELS[u.processor as Processor] || u.processor}
                 </p>
@@ -429,6 +455,45 @@ export default function ResidualsPage() {
           </div>
         )}
       </div>
+
+      {/* Delete Upload Confirmation Modal */}
+      {deleteUpload && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div
+            className="rounded-xl p-6 w-full max-w-md mx-4 shadow-xl"
+            style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)" }}
+          >
+            <h3 className="text-lg font-semibold mb-2" style={{ color: "var(--text-primary)" }}>
+              Delete Upload
+            </h3>
+            <p className="text-sm mb-1" style={{ color: "var(--text-secondary)" }}>
+              Are you sure you want to delete the <strong>{PROCESSOR_LABELS[deleteUpload.processor as Processor] || deleteUpload.processor}</strong> upload for{" "}
+              <strong>{MONTHS[deleteUpload.month - 1]} {deleteUpload.year}</strong>?
+            </p>
+            <p className="text-sm mb-6" style={{ color: "var(--text-muted)" }}>
+              This will remove {deleteUpload.recordCount} residual records. Merchants and agents will not be deleted.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setDeleteUpload(null)}
+                className="px-4 py-2 text-sm rounded-lg border transition-colors"
+                style={{ borderColor: "var(--border)", color: "var(--text-secondary)" }}
+                disabled={deleting}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteUpload}
+                disabled={deleting}
+                className="px-4 py-2 text-sm rounded-lg text-white transition-colors"
+                style={{ background: "#ef4444" }}
+              >
+                {deleting ? "Deleting..." : "Delete Upload"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
