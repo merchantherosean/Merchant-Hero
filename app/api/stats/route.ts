@@ -4,17 +4,30 @@ import { PROCESSOR_LABELS, type Processor } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const qYear = searchParams.get("year");
+  const qMonth = searchParams.get("month");
+
   const [merchantCount, activeMerchantCount, agentCount] = await Promise.all([
     prisma.merchant.count(),
     prisma.merchant.count({ where: { status: "Active" } }),
     prisma.agent.count(),
   ]);
 
-  // Get most recent month with data
-  const latestUpload = await prisma.residualUpload.findFirst({
-    orderBy: [{ year: "desc" }, { month: "desc" }],
-  });
+  // Use query params if provided, otherwise find the most recent month with data
+  let targetYear: number | null = qYear ? parseInt(qYear) : null;
+  let targetMonth: number | null = qMonth ? parseInt(qMonth) : null;
+
+  if (!targetYear || !targetMonth) {
+    const latestUpload = await prisma.residualUpload.findFirst({
+      orderBy: [{ year: "desc" }, { month: "desc" }],
+    });
+    if (latestUpload) {
+      targetYear = latestUpload.year;
+      targetMonth = latestUpload.month;
+    }
+  }
 
   let monthlyVolume = 0;
   let monthlyNet = 0;
@@ -22,8 +35,9 @@ export async function GET() {
   let topAgents: { id: string; name: string; merchantCount: number; totalVolume: number; totalEarnings: number }[] = [];
   let topMerchants: { id: string; dba: string; processor: string; volume: number; net: number }[] = [];
 
-  if (latestUpload) {
-    const { year, month } = latestUpload;
+  if (targetYear && targetMonth) {
+    const year = targetYear;
+    const month = targetMonth;
 
     // Aggregate by processor for the latest month
     // Include ALL merchants for company P&L (even hidden ones)
@@ -136,6 +150,8 @@ export async function GET() {
     agentCount,
     monthlyVolume,
     monthlyNet,
+    selectedYear: targetYear,
+    selectedMonth: targetMonth,
     processorBreakdown,
     topAgents,
     topMerchants,

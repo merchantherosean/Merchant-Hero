@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Users, Search, Plus } from "lucide-react";
 import StatusBadge from "@/components/StatusBadge";
 import { formatCurrency, formatNumber } from "@/lib/formatters";
+import { MONTHS } from "@/lib/types";
 
 interface AgentRow {
   id: string;
@@ -18,23 +19,30 @@ interface AgentRow {
 }
 
 export default function UsersPage() {
+  const currentDate = new Date();
   const [agents, setAgents] = useState<AgentRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1);
   const [showAddModal, setShowAddModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [newAgent, setNewAgent] = useState({ name: "", email: "", phone: "" });
+
+  const years = Array.from({ length: 5 }, (_, i) => currentDate.getFullYear() - i);
 
   const fetchAgents = useCallback(() => {
     setLoading(true);
     const params = new URLSearchParams();
     if (search) params.set("search", search);
+    params.set("year", selectedYear.toString());
+    params.set("month", selectedMonth.toString());
     fetch(`/api/agents?${params}`)
       .then((r) => r.json())
       .then(setAgents)
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [search]);
+  }, [search, selectedYear, selectedMonth]);
 
   useEffect(() => {
     fetchAgents();
@@ -77,6 +85,34 @@ export default function UsersPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <select
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+            className="px-3 py-2 rounded-lg text-sm outline-none cursor-pointer"
+            style={{
+              background: "var(--bg-secondary)",
+              border: "1px solid var(--border)",
+              color: "var(--text-primary)",
+            }}
+          >
+            {MONTHS.map((m, i) => (
+              <option key={i} value={i + 1}>{m}</option>
+            ))}
+          </select>
+          <select
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+            className="px-3 py-2 rounded-lg text-sm outline-none cursor-pointer"
+            style={{
+              background: "var(--bg-secondary)",
+              border: "1px solid var(--border)",
+              color: "var(--text-primary)",
+            }}
+          >
+            {years.map((y) => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </select>
           <span className="flex items-center gap-2 text-sm" style={{ color: "var(--text-muted)" }}>
             <Users size={16} />
             {agents.length} agents

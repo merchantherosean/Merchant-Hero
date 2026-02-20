@@ -50,6 +50,8 @@ export interface StatsResponse {
   agentCount: number;
   monthlyVolume: number;
   monthlyNet: number;
+  selectedYear: number | null;
+  selectedMonth: number | null;
   processorBreakdown: {
     processor: string;
     label: string;

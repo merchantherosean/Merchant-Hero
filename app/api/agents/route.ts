@@ -6,10 +6,19 @@ export const dynamic = "force-dynamic";
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const search = searchParams.get("search");
+  const qYear = searchParams.get("year");
+  const qMonth = searchParams.get("month");
 
   const where: Record<string, unknown> = {};
   if (search) {
     where.name = { contains: search, mode: "insensitive" };
+  }
+
+  // Build residuals filter for the selected period
+  const residualsWhere: Record<string, unknown> = {};
+  if (qYear && qMonth) {
+    residualsWhere.year = parseInt(qYear);
+    residualsWhere.month = parseInt(qMonth);
   }
 
   const agents = await prisma.agent.findMany({
@@ -20,6 +29,7 @@ export async function GET(req: Request) {
           merchant: {
             include: {
               residuals: {
+                where: residualsWhere,
                 select: { volume: true, netCommission: true },
               },
             },
