@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { BarChart3 } from "lucide-react";
 import { formatCurrency, formatCurrencyCompact, formatNumber } from "@/lib/formatters";
-import { PROCESSOR_LABELS, type Processor } from "@/lib/types";
+import { PROCESSOR_LABELS, MONTHS, type Processor } from "@/lib/types";
 
 interface ReportData {
   processorBreakdown: {
@@ -18,7 +18,7 @@ interface ReportData {
     name: string;
     merchantCount: number;
     totalVolume: number;
-    totalNet: number;
+    totalEarnings: number;
   }[];
   topMerchants: {
     id: string;
@@ -27,31 +27,67 @@ interface ReportData {
     volume: number;
     net: number;
   }[];
+  selectedYear: number | null;
+  selectedMonth: number | null;
 }
 
 export default function ReportingPage() {
+  const currentDate = new Date();
   const [data, setData] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1);
+  const [initialized, setInitialized] = useState(false);
 
-  useEffect(() => {
-    fetch("/api/stats")
+  const years = Array.from({ length: 5 }, (_, i) => currentDate.getFullYear() - i);
+
+  const fetchData = useCallback((year?: number, month?: number) => {
+    setLoading(true);
+    const params = new URLSearchParams();
+    if (year && month) {
+      params.set("year", year.toString());
+      params.set("month", month.toString());
+    }
+    fetch(`/api/stats?${params}`)
       .then((r) => r.json())
       .then((stats) => {
         setData({
           processorBreakdown: stats.processorBreakdown || [],
           topAgents: stats.topAgents || [],
           topMerchants: stats.topMerchants || [],
+          selectedYear: stats.selectedYear,
+          selectedMonth: stats.selectedMonth,
         });
+        // On first load, sync toggles to whatever month the API returned
+        if (!initialized && stats.selectedYear && stats.selectedMonth) {
+          setSelectedYear(stats.selectedYear);
+          setSelectedMonth(stats.selectedMonth);
+          setInitialized(true);
+        }
       })
       .catch(console.error)
       .finally(() => setLoading(false));
+  }, [initialized]);
+
+  // Initial load — let API auto-detect latest month
+  useEffect(() => {
+    if (!initialized) {
+      fetchData();
+    }
   }, []);
+
+  // When user changes month/year toggles
+  useEffect(() => {
+    if (initialized) {
+      fetchData(selectedYear, selectedMonth);
+    }
+  }, [selectedYear, selectedMonth, initialized]);
 
   const maxVolume = data?.processorBreakdown
     ? Math.max(...data.processorBreakdown.map((p) => p.volume), 1)
     : 1;
-  const maxAgentNet = data?.topAgents
-    ? Math.max(...data.topAgents.map((a) => a.totalNet), 1)
+  const maxAgentEarnings = data?.topAgents
+    ? Math.max(...data.topAgents.map((a) => a.totalEarnings), 1)
     : 1;
 
   const processorColors: Record<string, string> = {
@@ -63,13 +99,45 @@ export default function ReportingPage() {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold mb-1" style={{ color: "var(--text-primary)" }}>
-          Reporting
-        </h1>
-        <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-          Analytics and performance insights
-        </p>
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-2xl font-bold mb-1" style={{ color: "var(--text-primary)" }}>
+            Reporting
+          </h1>
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+            Analytics and performance insights
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <select
+            value={selectedMonth}
+            onChange={(e) => { setInitialized(true); setSelectedMonth(parseInt(e.target.value)); }}
+            className="px-3 py-2 rounded-lg text-sm outline-none cursor-pointer"
+            style={{
+              background: "var(--bg-secondary)",
+              border: "1px solid var(--border)",
+              color: "var(--text-primary)",
+            }}
+          >
+            {MONTHS.map((m, i) => (
+              <option key={i} value={i + 1}>{m}</option>
+            ))}
+          </select>
+          <select
+            value={selectedYear}
+            onChange={(e) => { setInitialized(true); setSelectedYear(parseInt(e.target.value)); }}
+            className="px-3 py-2 rounded-lg text-sm outline-none cursor-pointer"
+            style={{
+              background: "var(--bg-secondary)",
+              border: "1px solid var(--border)",
+              color: "var(--text-primary)",
+            }}
+          >
+            {years.map((y) => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {loading ? (
@@ -105,7 +173,7 @@ export default function ReportingPage() {
                   ))}
                 </div>
               ) : (
-                <p className="text-sm" style={{ color: "var(--text-muted)" }}>No data available.</p>
+                <p className="text-sm" style={{ color: "var(--text-muted)" }}>No data for this period.</p>
               )}
             </div>
 
@@ -136,7 +204,7 @@ export default function ReportingPage() {
                   })}
                 </div>
               ) : (
-                <p className="text-sm" style={{ color: "var(--text-muted)" }}>No data available.</p>
+                <p className="text-sm" style={{ color: "var(--text-muted)" }}>No data for this period.</p>
               )}
             </div>
           </div>
@@ -144,7 +212,7 @@ export default function ReportingPage() {
           {/* Top Agents */}
           <div className="rounded-xl p-6 border mb-8" style={{ background: "var(--bg-secondary)", borderColor: "var(--border)" }}>
             <h2 className="text-sm font-semibold mb-4" style={{ color: "var(--text-primary)" }}>
-              Top Agents by Net Revenue
+              Top Agents by Earnings
             </h2>
             {data?.topAgents && data.topAgents.length > 0 ? (
               <div className="space-y-3">
@@ -159,14 +227,14 @@ export default function ReportingPage() {
                           {agent.name}
                         </span>
                         <span className="text-sm font-medium" style={{ color: "#34d399" }}>
-                          {formatCurrency(agent.totalNet)}
+                          {formatCurrency(agent.totalEarnings)}
                         </span>
                       </div>
                       <div className="h-2 rounded-full overflow-hidden" style={{ background: "var(--bg-tertiary)" }}>
                         <div
                           className="h-full rounded-full"
                           style={{
-                            width: `${(agent.totalNet / maxAgentNet) * 100}%`,
+                            width: `${(agent.totalEarnings / maxAgentEarnings) * 100}%`,
                             background: "#7c6aef",
                           }}
                         />
@@ -176,7 +244,7 @@ export default function ReportingPage() {
                 ))}
               </div>
             ) : (
-              <p className="text-sm" style={{ color: "var(--text-muted)" }}>No agent data available.</p>
+              <p className="text-sm" style={{ color: "var(--text-muted)" }}>No agent data for this period.</p>
             )}
           </div>
 
@@ -215,7 +283,7 @@ export default function ReportingPage() {
                 ) : (
                   <tr>
                     <td colSpan={5} className="px-4 py-8 text-center text-sm" style={{ color: "var(--text-muted)" }}>
-                      No merchant data available.
+                      No merchant data for this period.
                     </td>
                   </tr>
                 )}

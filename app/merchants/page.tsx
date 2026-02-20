@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import StatusBadge from "@/components/StatusBadge";
 import { formatCurrency, formatNumber } from "@/lib/formatters";
-import { PROCESSOR_LABELS, type Processor } from "@/lib/types";
+import { PROCESSOR_LABELS, MONTHS, type Processor } from "@/lib/types";
 
 interface AgentAssignment {
   id: string;
@@ -51,6 +51,7 @@ interface TagOption {
 }
 
 export default function MerchantsPage() {
+  const currentDate = new Date();
   const [merchants, setMerchants] = useState<MerchantRow[]>([]);
   const [agents, setAgents] = useState<AgentOption[]>([]);
   const [tags, setTags] = useState<TagOption[]>([]);
@@ -59,6 +60,10 @@ export default function MerchantsPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [processorFilter, setProcessorFilter] = useState("all");
   const [showHidden, setShowHidden] = useState(false);
+  const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1);
+
+  const years = Array.from({ length: 5 }, (_, i) => currentDate.getFullYear() - i);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [tagModal, setTagModal] = useState(false);
   const [newTagName, setNewTagName] = useState("");
@@ -80,12 +85,14 @@ export default function MerchantsPage() {
     if (processorFilter !== "all") params.set("processor", processorFilter);
     if (showHidden) params.set("showHidden", "true");
     if (tagFilter !== "all") params.set("tagId", tagFilter);
+    params.set("year", selectedYear.toString());
+    params.set("month", selectedMonth.toString());
     fetch(`/api/merchants?${params}`)
       .then((r) => r.json())
       .then(setMerchants)
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [search, statusFilter, processorFilter, showHidden, tagFilter]);
+  }, [search, statusFilter, processorFilter, showHidden, tagFilter, selectedYear, selectedMonth]);
 
   const fetchAgents = () => {
     fetch("/api/agents").then((r) => r.json()).then(setAgents).catch(console.error);
@@ -238,6 +245,26 @@ export default function MerchantsPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <select
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+            className="px-3 py-2 rounded-lg text-sm outline-none cursor-pointer"
+            style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)" }}
+          >
+            {MONTHS.map((m, i) => (
+              <option key={i} value={i + 1}>{m}</option>
+            ))}
+          </select>
+          <select
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+            className="px-3 py-2 rounded-lg text-sm outline-none cursor-pointer"
+            style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)" }}
+          >
+            {years.map((y) => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </select>
           <label className="flex items-center gap-2 text-xs cursor-pointer" style={{ color: "var(--text-muted)" }}>
             <input type="checkbox" checked={showHidden} onChange={() => setShowHidden(!showHidden)} className="rounded" />
             Show hidden

@@ -10,6 +10,8 @@ export async function GET(req: Request) {
   const processor = searchParams.get("processor");
   const showHidden = searchParams.get("showHidden") === "true";
   const tagId = searchParams.get("tagId");
+  const qYear = searchParams.get("year");
+  const qMonth = searchParams.get("month");
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const where: any = {};
@@ -35,11 +37,16 @@ export async function GET(req: Request) {
           agent: { select: { id: true, name: true } },
         },
       },
-      residuals: {
-        orderBy: [{ year: "desc" }, { month: "desc" }],
-        take: 1,
-        select: { volume: true, netCommission: true },
-      },
+      residuals: qYear && qMonth
+        ? {
+            where: { year: parseInt(qYear), month: parseInt(qMonth) },
+            select: { volume: true, netCommission: true },
+          }
+        : {
+            orderBy: [{ year: "desc" as const }, { month: "desc" as const }],
+            take: 1,
+            select: { volume: true, netCommission: true },
+          },
       tags: {
         include: {
           tag: { select: { id: true, name: true, color: true } },
@@ -62,8 +69,8 @@ export async function GET(req: Request) {
         name: ma.agent.name,
         bpsRate: ma.bpsRate,
       })),
-      latestVolume: m.residuals[0]?.volume ?? null,
-      latestNet: m.residuals[0]?.netCommission ?? null,
+      latestVolume: m.residuals.length > 0 ? m.residuals.reduce((s, r) => s + r.volume, 0) : null,
+      latestNet: m.residuals.length > 0 ? m.residuals.reduce((s, r) => s + r.netCommission, 0) : null,
       tags: m.tags.map((t) => ({ id: t.tag.id, name: t.tag.name, color: t.tag.color })),
     }))
   );
