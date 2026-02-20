@@ -61,7 +61,7 @@ export default function AgentDetailPage() {
     return (
       <div>
         <Link href="/users" className="text-sm hover:underline" style={{ color: "#7c6aef" }}>
-          &larr; Back to Users
+          &larr; Back to Agents
         </Link>
         <p className="mt-4 text-sm" style={{ color: "var(--text-muted)" }}>Agent not found.</p>
       </div>
@@ -93,7 +93,7 @@ export default function AgentDetailPage() {
         style={{ color: "#7c6aef" }}
       >
         <ArrowLeft size={14} />
-        Back to Users
+        Back to Agents
       </Link>
 
       {/* Header */}

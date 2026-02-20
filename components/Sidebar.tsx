@@ -24,7 +24,7 @@ const nav = [
   { href: "/residuals", label: "Residuals", icon: DollarSign },
   { href: "/calendar", label: "Calendar", icon: Calendar },
   { href: "/documents", label: "Documents", icon: FolderOpen },
-  { href: "/users", label: "Users", icon: Users },
+  { href: "/users", label: "Agents", icon: Users },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 

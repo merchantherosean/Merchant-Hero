@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { Users, Search } from "lucide-react";
+import { Users, Search, Plus } from "lucide-react";
 import StatusBadge from "@/components/StatusBadge";
 import { formatCurrency, formatNumber } from "@/lib/formatters";
 
@@ -21,8 +21,12 @@ export default function UsersPage() {
   const [agents, setAgents] = useState<AgentRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [newAgent, setNewAgent] = useState({ name: "", email: "", phone: "", splitPercent: "" });
 
-  useEffect(() => {
+  const fetchAgents = useCallback(() => {
+    setLoading(true);
     const params = new URLSearchParams();
     if (search) params.set("search", search);
     fetch(`/api/agents?${params}`)
@@ -32,20 +36,60 @@ export default function UsersPage() {
       .finally(() => setLoading(false));
   }, [search]);
 
+  useEffect(() => {
+    fetchAgents();
+  }, [fetchAgents]);
+
+  const handleAddAgent = async () => {
+    if (!newAgent.name.trim()) return;
+    setSaving(true);
+    try {
+      const res = await fetch("/api/agents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: newAgent.name.trim(),
+          email: newAgent.email.trim() || null,
+          phone: newAgent.phone.trim() || null,
+          splitPercent: newAgent.splitPercent ? parseFloat(newAgent.splitPercent) : null,
+        }),
+      });
+      if (res.ok) {
+        setShowAddModal(false);
+        setNewAgent({ name: "", email: "", phone: "", splitPercent: "" });
+        fetchAgents();
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold mb-1" style={{ color: "var(--text-primary)" }}>
-            Users & Agents
+            Agents
           </h1>
           <p className="text-sm" style={{ color: "var(--text-muted)" }}>
             Manage your sales agents and team members
           </p>
         </div>
-        <div className="flex items-center gap-2 text-sm" style={{ color: "var(--text-muted)" }}>
-          <Users size={16} />
-          {agents.length} agents
+        <div className="flex items-center gap-3">
+          <span className="flex items-center gap-2 text-sm" style={{ color: "var(--text-muted)" }}>
+            <Users size={16} />
+            {agents.length} agents
+          </span>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg text-white"
+            style={{ background: "#7c6aef" }}
+          >
+            <Plus size={16} />
+            Add Agent
+          </button>
         </div>
       </div>
 
@@ -145,6 +189,98 @@ export default function UsersPage() {
               </div>
             </Link>
           ))}
+        </div>
+      )}
+
+      {/* Add Agent Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div
+            className="rounded-xl p-6 w-full max-w-md mx-4 shadow-xl"
+            style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)" }}
+          >
+            <h3 className="text-lg font-semibold mb-4" style={{ color: "var(--text-primary)" }}>
+              Add Agent
+            </h3>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs mb-1" style={{ color: "var(--text-muted)" }}>
+                  Name <span style={{ color: "#ef4444" }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  value={newAgent.name}
+                  onChange={(e) => setNewAgent({ ...newAgent, name: e.target.value })}
+                  placeholder="Full name"
+                  className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                  style={{ background: "var(--bg-primary)", border: "1px solid var(--border)", color: "var(--text-primary)" }}
+                />
+              </div>
+              <div>
+                <label className="block text-xs mb-1" style={{ color: "var(--text-muted)" }}>
+                  Email
+                </label>
+                <input
+                  type="email"
+                  value={newAgent.email}
+                  onChange={(e) => setNewAgent({ ...newAgent, email: e.target.value })}
+                  placeholder="agent@example.com"
+                  className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                  style={{ background: "var(--bg-primary)", border: "1px solid var(--border)", color: "var(--text-primary)" }}
+                />
+              </div>
+              <div>
+                <label className="block text-xs mb-1" style={{ color: "var(--text-muted)" }}>
+                  Phone
+                </label>
+                <input
+                  type="tel"
+                  value={newAgent.phone}
+                  onChange={(e) => setNewAgent({ ...newAgent, phone: e.target.value })}
+                  placeholder="(555) 123-4567"
+                  className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                  style={{ background: "var(--bg-primary)", border: "1px solid var(--border)", color: "var(--text-primary)" }}
+                />
+              </div>
+              <div>
+                <label className="block text-xs mb-1" style={{ color: "var(--text-muted)" }}>
+                  Split Percent
+                </label>
+                <input
+                  type="number"
+                  value={newAgent.splitPercent}
+                  onChange={(e) => setNewAgent({ ...newAgent, splitPercent: e.target.value })}
+                  placeholder="e.g. 15"
+                  step="0.5"
+                  min="0"
+                  max="100"
+                  className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                  style={{ background: "var(--bg-primary)", border: "1px solid var(--border)", color: "var(--text-primary)" }}
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowAddModal(false);
+                  setNewAgent({ name: "", email: "", phone: "", splitPercent: "" });
+                }}
+                className="px-4 py-2 text-sm rounded-lg border transition-colors"
+                style={{ borderColor: "var(--border)", color: "var(--text-secondary)" }}
+                disabled={saving}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddAgent}
+                disabled={saving || !newAgent.name.trim()}
+                className="px-4 py-2 text-sm rounded-lg text-white transition-colors disabled:opacity-50"
+                style={{ background: "#7c6aef" }}
+              >
+                {saving ? "Adding..." : "Add Agent"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
