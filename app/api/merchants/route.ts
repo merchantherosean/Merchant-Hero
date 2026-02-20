@@ -30,7 +30,11 @@ export async function GET(req: Request) {
   const merchants = await prisma.merchant.findMany({
     where,
     include: {
-      agent: { select: { id: true, name: true } },
+      agents: {
+        include: {
+          agent: { select: { id: true, name: true } },
+        },
+      },
       residuals: {
         orderBy: [{ year: "desc" }, { month: "desc" }],
         take: 1,
@@ -53,9 +57,11 @@ export async function GET(req: Request) {
       processor: m.processor,
       status: m.status,
       hidden: m.hidden,
-      bpsRate: m.bpsRate,
-      agentId: m.agent?.id ?? null,
-      agentName: m.agent?.name ?? null,
+      agents: m.agents.map((ma) => ({
+        id: ma.agent.id,
+        name: ma.agent.name,
+        bpsRate: ma.bpsRate,
+      })),
       latestVolume: m.residuals[0]?.volume ?? null,
       latestNet: m.residuals[0]?.netCommission ?? null,
       tags: m.tags.map((t) => ({ id: t.tag.id, name: t.tag.name, color: t.tag.color })),
@@ -71,8 +77,6 @@ export async function POST(req: Request) {
       dba: body.dba,
       processor: body.processor,
       status: body.status || "Active",
-      agentId: body.agentId,
-      bpsRate: body.bpsRate,
     },
   });
   return NextResponse.json(merchant, { status: 201 });

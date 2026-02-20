@@ -10,6 +10,12 @@ import StatusBadge from "@/components/StatusBadge";
 import { formatCurrency, formatNumber } from "@/lib/formatters";
 import { PROCESSOR_LABELS, type Processor } from "@/lib/types";
 
+interface AgentAssignment {
+  id: string;
+  name: string;
+  bpsRate: number | null;
+}
+
 interface TagInfo {
   id: string;
   name: string;
@@ -23,9 +29,7 @@ interface MerchantRow {
   processor: string;
   status: string;
   hidden: boolean;
-  bpsRate: number | null;
-  agentId: string | null;
-  agentName: string | null;
+  agents: AgentAssignment[];
   latestVolume: number | null;
   latestNet: number | null;
   tags: TagInfo[];
@@ -56,13 +60,17 @@ export default function MerchantsPage() {
   const [processorFilter, setProcessorFilter] = useState("all");
   const [showHidden, setShowHidden] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [assignModal, setAssignModal] = useState<string | null>(null);
-  const [assignAgentId, setAssignAgentId] = useState<string>("");
-  const [assignBps, setAssignBps] = useState<string>("");
   const [tagModal, setTagModal] = useState(false);
   const [newTagName, setNewTagName] = useState("");
   const [selectedTagId, setSelectedTagId] = useState<string>("new");
   const [tagFilter, setTagFilter] = useState<string>("all");
+
+  // Manage Agents modal state
+  const [manageModal, setManageModal] = useState<string | null>(null);
+  const [manageAgents, setManageAgents] = useState<AgentAssignment[]>([]);
+  const [addAgentId, setAddAgentId] = useState<string>("");
+  const [addBps, setAddBps] = useState<string>("");
+  const [saving, setSaving] = useState(false);
 
   const fetchMerchants = useCallback(() => {
     setLoading(true);
@@ -102,29 +110,59 @@ export default function MerchantsPage() {
     fetchMerchants();
   };
 
-  const handleAssign = async () => {
-    if (!assignModal) return;
-    await fetch(`/api/merchants/${assignModal}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        agentId: assignAgentId || null,
-        bpsRate: assignBps ? parseFloat(assignBps) : null,
-      }),
-    });
-    setAssignModal(null);
-    setAssignAgentId("");
-    setAssignBps("");
-    fetchMerchants();
+  // Open "Manage Agents" modal for a merchant
+  const openManageModal = (merchant: MerchantRow) => {
+    setManageModal(merchant.id);
+    setManageAgents([...merchant.agents]);
+    setAddAgentId("");
+    setAddBps("");
   };
 
-  const unassignAgent = async (id: string) => {
-    await fetch(`/api/merchants/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ agentId: null, bpsRate: null }),
-    });
-    fetchMerchants();
+  // Add an agent to this merchant
+  const handleAddAgent = async () => {
+    if (!manageModal || !addAgentId) return;
+    setSaving(true);
+    try {
+      await fetch(`/api/merchants/${manageModal}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          addAgent: {
+            agentId: addAgentId,
+            bpsRate: addBps ? parseFloat(addBps) : null,
+          },
+        }),
+      });
+      // Refresh the local agent list
+      const agentOption = agents.find((a) => a.id === addAgentId);
+      setManageAgents((prev) => [...prev, { id: addAgentId, name: agentOption?.name || "", bpsRate: addBps ? parseFloat(addBps) : null }]);
+      setAddAgentId("");
+      setAddBps("");
+      fetchMerchants();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Remove an agent from this merchant
+  const handleRemoveAgent = async (agentId: string) => {
+    if (!manageModal) return;
+    setSaving(true);
+    try {
+      await fetch(`/api/merchants/${manageModal}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ removeAgent: { agentId } }),
+      });
+      setManageAgents((prev) => prev.filter((a) => a.id !== agentId));
+      fetchMerchants();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const toggleSelect = (id: string) => {
@@ -184,6 +222,11 @@ export default function MerchantsPage() {
   const selectedVolume = merchants
     .filter((m) => selectedIds.has(m.id))
     .reduce((s, m) => s + (m.latestVolume ?? 0), 0);
+
+  // Agents not yet assigned to the current merchant (for dropdown)
+  const availableAgents = agents.filter(
+    (a) => !manageAgents.some((ma) => ma.id === a.id)
+  );
 
   return (
     <div>
@@ -289,16 +332,16 @@ export default function MerchantsPage() {
                 <input type="checkbox" checked={merchants.length > 0 && selectedIds.size === merchants.length}
                   onChange={toggleSelectAll} className="rounded cursor-pointer" />
               </th>
-              {["DBA Name", "MID", "Processor", "Status", "Agent", "BPS", "Volume", "Net", "Tags", ""].map((h) => (
+              {["DBA Name", "MID", "Processor", "Status", "Agents", "Volume", "Net", "Tags", ""].map((h) => (
                 <th key={h} className="text-left text-xs font-semibold uppercase tracking-wider px-3 py-3" style={{ color: "var(--text-muted)" }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={11} className="px-4 py-12 text-center text-sm animate-pulse" style={{ color: "var(--text-muted)" }}>Loading...</td></tr>
+              <tr><td colSpan={10} className="px-4 py-12 text-center text-sm animate-pulse" style={{ color: "var(--text-muted)" }}>Loading...</td></tr>
             ) : merchants.length === 0 ? (
-              <tr><td colSpan={11} className="px-4 py-12 text-center text-sm" style={{ color: "var(--text-muted)" }}>No merchants found. Upload residuals to get started.</td></tr>
+              <tr><td colSpan={10} className="px-4 py-12 text-center text-sm" style={{ color: "var(--text-muted)" }}>No merchants found. Upload residuals to get started.</td></tr>
             ) : (
               merchants.map((m) => (
                 <tr key={m.id} className="border-t transition-colors group"
@@ -319,25 +362,46 @@ export default function MerchantsPage() {
                     </span>
                   </td>
                   <td className="px-3 py-3"><StatusBadge status={m.status} /></td>
+                  {/* Agents column — show stacked agent pills */}
                   <td className="px-3 py-3">
-                    {m.agentName ? (
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-sm" style={{ color: "var(--text-secondary)" }}>{m.agentName}</span>
-                        <button onClick={() => unassignAgent(m.id)}
-                          className="opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity"
-                          style={{ color: "#ef4444" }} title="Unassign agent">
-                          <UserMinus size={12} />
+                    {m.agents.length > 0 ? (
+                      <div className="flex flex-col gap-1">
+                        {m.agents.map((a) => (
+                          <div key={a.id} className="flex items-center gap-1.5">
+                            <span className="text-xs" style={{ color: "var(--text-secondary)" }}>
+                              {a.name}
+                              {a.bpsRate != null && (
+                                <span className="ml-1 font-mono text-[10px]" style={{ color: "var(--text-muted)" }}>
+                                  ({a.bpsRate} BPS)
+                                </span>
+                              )}
+                            </span>
+                            <button onClick={async () => {
+                                await fetch(`/api/merchants/${m.id}`, {
+                                  method: "PUT",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ removeAgent: { agentId: a.id } }),
+                                });
+                                fetchMerchants();
+                              }}
+                              className="opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity"
+                              style={{ color: "#ef4444" }} title={`Remove ${a.name}`}>
+                              <X size={10} />
+                            </button>
+                          </div>
+                        ))}
+                        <button onClick={() => openManageModal(m)}
+                          className="text-[10px] cursor-pointer flex items-center gap-0.5 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                          style={{ color: "#7c6aef" }}>
+                          <Plus size={10} /> Add
                         </button>
                       </div>
                     ) : (
-                      <button onClick={() => { setAssignModal(m.id); setAssignAgentId(""); setAssignBps(m.bpsRate?.toString() || ""); }}
+                      <button onClick={() => openManageModal(m)}
                         className="text-xs cursor-pointer flex items-center gap-1" style={{ color: "#7c6aef" }}>
                         <UserPlus size={12} /> Assign
                       </button>
                     )}
-                  </td>
-                  <td className="px-3 py-3 text-xs font-mono" style={{ color: m.bpsRate ? "var(--text-primary)" : "var(--text-muted)" }}>
-                    {m.bpsRate != null ? m.bpsRate : "—"}
                   </td>
                   <td className="px-3 py-3 text-sm" style={{ color: "var(--text-primary)" }}>
                     {m.latestVolume != null ? formatCurrency(m.latestVolume) : "—"}
@@ -362,8 +426,8 @@ export default function MerchantsPage() {
                         title={m.hidden ? "Show in reports" : "Hide from reports"}>
                         {m.hidden ? <EyeOff size={14} /> : <Eye size={14} />}
                       </button>
-                      <button onClick={() => { setAssignModal(m.id); setAssignAgentId(m.agentId || ""); setAssignBps(m.bpsRate?.toString() || ""); }}
-                        className="p-1 rounded cursor-pointer transition-colors" style={{ color: "var(--text-muted)" }} title="Assign agent & BPS">
+                      <button onClick={() => openManageModal(m)}
+                        className="p-1 rounded cursor-pointer transition-colors" style={{ color: "var(--text-muted)" }} title="Manage agents">
                         <UserPlus size={14} />
                       </button>
                     </div>
@@ -375,36 +439,70 @@ export default function MerchantsPage() {
         </table>
       </div>
 
-      {/* Assign Agent Modal */}
-      {assignModal && (
+      {/* Manage Agents Modal */}
+      {manageModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-sm rounded-xl p-6 border" style={{ background: "var(--bg-primary)", borderColor: "var(--border)" }}>
+          <div className="w-full max-w-md rounded-xl p-6 border" style={{ background: "var(--bg-primary)", borderColor: "var(--border)" }}>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold" style={{ color: "var(--text-primary)" }}>Assign Agent & BPS</h2>
-              <button onClick={() => setAssignModal(null)} className="cursor-pointer" style={{ color: "var(--text-muted)" }}><X size={20} /></button>
+              <h2 className="text-lg font-semibold" style={{ color: "var(--text-primary)" }}>Manage Agents</h2>
+              <button onClick={() => setManageModal(null)} className="cursor-pointer" style={{ color: "var(--text-muted)" }}><X size={20} /></button>
             </div>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs mb-1.5" style={{ color: "var(--text-muted)" }}>Agent</label>
-                <select value={assignAgentId} onChange={(e) => setAssignAgentId(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-lg text-sm outline-none cursor-pointer"
+
+            {/* Current Agents */}
+            {manageAgents.length > 0 ? (
+              <div className="space-y-2 mb-4">
+                <p className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>Assigned Agents</p>
+                {manageAgents.map((a) => (
+                  <div key={a.id} className="flex items-center justify-between p-2.5 rounded-lg border"
+                    style={{ background: "var(--bg-secondary)", borderColor: "var(--border)" }}>
+                    <div>
+                      <span className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>{a.name}</span>
+                      {a.bpsRate != null && (
+                        <span className="ml-2 text-xs font-mono" style={{ color: "#7c6aef" }}>{a.bpsRate} BPS</span>
+                      )}
+                      {a.bpsRate == null && (
+                        <span className="ml-2 text-xs" style={{ color: "var(--text-muted)" }}>No BPS set</span>
+                      )}
+                    </div>
+                    <button onClick={() => handleRemoveAgent(a.id)}
+                      disabled={saving}
+                      className="p-1 rounded cursor-pointer transition-colors hover:bg-red-500/10"
+                      style={{ color: "#ef4444" }} title="Remove agent">
+                      <UserMinus size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-4 mb-4 rounded-lg" style={{ background: "var(--bg-secondary)" }}>
+                <p className="text-sm" style={{ color: "var(--text-muted)" }}>No agents assigned</p>
+              </div>
+            )}
+
+            {/* Add Agent */}
+            <div className="border-t pt-4" style={{ borderColor: "var(--border)" }}>
+              <p className="text-xs font-medium mb-2" style={{ color: "var(--text-muted)" }}>Add Agent</p>
+              <div className="flex gap-2">
+                <select value={addAgentId} onChange={(e) => setAddAgentId(e.target.value)}
+                  className="flex-1 px-3 py-2.5 rounded-lg text-sm outline-none cursor-pointer"
                   style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)" }}>
-                  <option value="">Unassigned</option>
-                  {agents.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                  <option value="">Select agent...</option>
+                  {availableAgents.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
                 </select>
-              </div>
-              <div>
-                <label className="block text-xs mb-1.5" style={{ color: "var(--text-muted)" }}>BPS Rate (basis points)</label>
-                <input type="number" step="0.01" placeholder="e.g. 15.5" value={assignBps}
-                  onChange={(e) => setAssignBps(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-lg text-sm outline-none"
+                <input type="number" step="0.01" placeholder="BPS" value={addBps}
+                  onChange={(e) => setAddBps(e.target.value)}
+                  className="w-24 px-3 py-2.5 rounded-lg text-sm outline-none"
                   style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)" }} />
-                <p className="text-[10px] mt-1" style={{ color: "var(--text-muted)" }}>Each agent earns a different BPS rate per location</p>
+                <button onClick={handleAddAgent}
+                  disabled={!addAgentId || saving}
+                  className="px-4 py-2.5 rounded-lg text-sm font-medium text-white cursor-pointer disabled:opacity-50"
+                  style={{ background: "#7c6aef" }}>
+                  <Plus size={14} />
+                </button>
               </div>
-              <button onClick={handleAssign}
-                className="w-full py-2.5 rounded-lg text-sm font-medium text-white cursor-pointer" style={{ background: "#7c6aef" }}>
-                <Check size={14} className="inline mr-1.5" /> Save Assignment
-              </button>
+              <p className="text-[10px] mt-1.5" style={{ color: "var(--text-muted)" }}>
+                BPS = basis points. Agent earns volume &times; (BPS / 10,000). E.g. 30 BPS on $100k volume = $300.
+              </p>
             </div>
           </div>
         </div>

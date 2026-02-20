@@ -9,22 +9,26 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const agent = await prisma.agent.findUnique({
     where: { id },
     include: {
-      merchants: {
-        select: {
-          id: true,
-          mid: true,
-          dba: true,
-          processor: true,
-          status: true,
-        },
-      },
-      residuals: {
-        select: {
-          year: true,
-          month: true,
-          volume: true,
-          netCommission: true,
-          merchantId: true,
+      merchantAssignments: {
+        include: {
+          merchant: {
+            select: {
+              id: true,
+              mid: true,
+              dba: true,
+              processor: true,
+              status: true,
+              residuals: {
+                select: {
+                  year: true,
+                  month: true,
+                  volume: true,
+                  netCommission: true,
+                  merchantId: true,
+                },
+              },
+            },
+          },
         },
       },
     },
@@ -34,23 +38,38 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  // Aggregate monthly earnings
-  const monthlyMap = new Map<string, { year: number; month: number; volume: number; net: number; merchants: Set<string> }>();
-  for (const r of agent.residuals) {
-    const key = `${r.year}-${r.month}`;
-    const existing = monthlyMap.get(key);
-    if (existing) {
-      existing.volume += r.volume;
-      existing.net += r.netCommission;
-      existing.merchants.add(r.merchantId);
-    } else {
-      monthlyMap.set(key, {
-        year: r.year,
-        month: r.month,
-        volume: r.volume,
-        net: r.netCommission,
-        merchants: new Set([r.merchantId]),
-      });
+  // Build merchants list with bpsRate
+  const merchants = agent.merchantAssignments.map((ma) => ({
+    id: ma.merchant.id,
+    mid: ma.merchant.mid,
+    dba: ma.merchant.dba,
+    processor: ma.merchant.processor,
+    status: ma.merchant.status,
+    bpsRate: ma.bpsRate,
+  }));
+
+  // Aggregate monthly earnings using BPS calculation
+  const monthlyMap = new Map<string, { year: number; month: number; volume: number; earnings: number; merchants: Set<string> }>();
+
+  for (const ma of agent.merchantAssignments) {
+    const bps = ma.bpsRate ?? 0;
+    for (const r of ma.merchant.residuals) {
+      const key = `${r.year}-${r.month}`;
+      const earning = r.volume * (bps / 10000);
+      const existing = monthlyMap.get(key);
+      if (existing) {
+        existing.volume += r.volume;
+        existing.earnings += earning;
+        existing.merchants.add(r.merchantId);
+      } else {
+        monthlyMap.set(key, {
+          year: r.year,
+          month: r.month,
+          volume: r.volume,
+          earnings: earning,
+          merchants: new Set([r.merchantId]),
+        });
+      }
     }
   }
 
@@ -58,7 +77,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     year: e.year,
     month: e.month,
     volume: e.volume,
-    net: e.net,
+    earnings: e.earnings,
     merchantCount: e.merchants.size,
   }));
 
@@ -70,7 +89,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     splitPercent: agent.splitPercent,
     status: agent.status,
     createdAt: agent.createdAt,
-    merchants: agent.merchants,
+    merchants,
     monthlyEarnings,
   });
 }
@@ -78,9 +97,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
-  // Unassign merchants and residuals before deleting the agent
-  await prisma.merchant.updateMany({ where: { agentId: id }, data: { agentId: null } });
-  await prisma.residual.updateMany({ where: { agentId: id }, data: { agentId: null } });
+  // MerchantAgent records will cascade-delete automatically
   await prisma.agent.delete({ where: { id } });
 
   return NextResponse.json({ success: true });

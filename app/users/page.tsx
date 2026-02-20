@@ -14,7 +14,7 @@ interface AgentRow {
   status: string;
   merchantCount: number;
   totalVolume: number;
-  totalNet: number;
+  totalEarnings: number;
 }
 
 export default function UsersPage() {
@@ -179,10 +179,10 @@ export default function UsersPage() {
                 </div>
                 <div>
                   <p className="text-[10px] uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
-                    Net
+                    Earnings
                   </p>
                   <p className="text-sm font-medium" style={{ color: "#34d399" }}>
-                    {formatCurrency(agent.totalNet)}
+                    {formatCurrency(agent.totalEarnings)}
                   </p>
                 </div>
               </div>

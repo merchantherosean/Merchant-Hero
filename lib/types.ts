@@ -57,6 +57,20 @@ export interface StatsResponse {
     volume: number;
     net: number;
   }[];
+  topAgents: {
+    id: string;
+    name: string;
+    merchantCount: number;
+    totalVolume: number;
+    totalEarnings: number;
+  }[];
+  topMerchants: {
+    id: string;
+    dba: string;
+    processor: string;
+    volume: number;
+    net: number;
+  }[];
   recentUploads: {
     processor: string;
     year: number;

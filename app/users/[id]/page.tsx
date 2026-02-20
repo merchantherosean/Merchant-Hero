@@ -23,12 +23,13 @@ interface AgentDetail {
     dba: string;
     processor: string;
     status: string;
+    bpsRate: number | null;
   }[];
   monthlyEarnings: {
     year: number;
     month: number;
     volume: number;
-    net: number;
+    earnings: number;
     merchantCount: number;
   }[];
 }
@@ -83,7 +84,7 @@ export default function AgentDetailPage() {
   }
 
   const totalVolume = agent.monthlyEarnings.reduce((s, e) => s + e.volume, 0);
-  const totalNet = agent.monthlyEarnings.reduce((s, e) => s + e.net, 0);
+  const totalEarnings = agent.monthlyEarnings.reduce((s, e) => s + e.earnings, 0);
 
   return (
     <div>
@@ -151,8 +152,8 @@ export default function AgentDetailPage() {
           color="#60a5fa"
         />
         <StatsCard
-          label="Total Net Earned"
-          value={formatCurrency(totalNet)}
+          label="Total BPS Earnings"
+          value={formatCurrency(totalEarnings)}
           icon={<Users size={20} />}
           color="#34d399"
         />
@@ -171,7 +172,7 @@ export default function AgentDetailPage() {
         <table className="w-full">
           <thead>
             <tr style={{ background: "var(--bg-tertiary)" }}>
-              {["DBA Name", "MID", "Processor", "Status"].map((h) => (
+              {["DBA Name", "MID", "Processor", "BPS Rate", "Status"].map((h) => (
                 <th
                   key={h}
                   className="text-left text-xs font-semibold uppercase tracking-wider px-4 py-2"
@@ -185,7 +186,7 @@ export default function AgentDetailPage() {
           <tbody>
             {agent.merchants.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-sm" style={{ color: "var(--text-muted)" }}>
+                <td colSpan={5} className="px-4 py-8 text-center text-sm" style={{ color: "var(--text-muted)" }}>
                   No merchants assigned.
                 </td>
               </tr>
@@ -204,6 +205,9 @@ export default function AgentDetailPage() {
                     <span className="text-xs px-2 py-1 rounded-md" style={{ background: "var(--bg-tertiary)", color: "var(--text-secondary)" }}>
                       {PROCESSOR_LABELS[m.processor as Processor] || m.processor}
                     </span>
+                  </td>
+                  <td className="px-4 py-3 text-sm font-mono" style={{ color: m.bpsRate ? "#7c6aef" : "var(--text-muted)" }}>
+                    {m.bpsRate != null ? `${m.bpsRate}` : "—"}
                   </td>
                   <td className="px-4 py-3">
                     <StatusBadge status={m.status} />
@@ -228,7 +232,7 @@ export default function AgentDetailPage() {
         <table className="w-full">
           <thead>
             <tr style={{ background: "var(--bg-tertiary)" }}>
-              {["Period", "Active Merchants", "Volume", "Net Commission"].map((h) => (
+              {["Period", "Active Merchants", "Volume", "BPS Earnings"].map((h) => (
                 <th
                   key={h}
                   className="text-left text-xs font-semibold uppercase tracking-wider px-4 py-2"
@@ -261,7 +265,7 @@ export default function AgentDetailPage() {
                       {formatCurrency(e.volume)}
                     </td>
                     <td className="px-4 py-3 text-sm font-medium" style={{ color: "#34d399" }}>
-                      {formatCurrency(e.net)}
+                      {formatCurrency(e.earnings)}
                     </td>
                   </tr>
                 ))
@@ -284,7 +288,7 @@ export default function AgentDetailPage() {
               Are you sure you want to delete <strong>{agent.name}</strong>?
             </p>
             <p className="text-sm mb-6" style={{ color: "var(--text-muted)" }}>
-              Their {agent.merchants.length} assigned merchant{agent.merchants.length !== 1 ? "s" : ""} and residual records will be unassigned, not deleted.
+              Their {agent.merchants.length} merchant assignment{agent.merchants.length !== 1 ? "s" : ""} will be removed. Merchant and residual data will not be deleted.
             </p>
             <div className="flex justify-end gap-3">
               <button

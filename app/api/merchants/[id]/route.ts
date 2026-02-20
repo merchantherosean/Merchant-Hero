@@ -9,7 +9,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const merchant = await prisma.merchant.findUnique({
     where: { id },
     include: {
-      agent: { select: { id: true, name: true } },
+      agents: {
+        include: {
+          agent: { select: { id: true, name: true } },
+        },
+      },
       residuals: {
         orderBy: [{ year: "desc" }, { month: "desc" }],
         select: {
@@ -40,9 +44,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     processor: merchant.processor,
     status: merchant.status,
     hidden: merchant.hidden,
-    bpsRate: merchant.bpsRate,
-    agentId: merchant.agent?.id ?? null,
-    agentName: merchant.agent?.name ?? null,
+    agents: merchant.agents.map((ma) => ({
+      id: ma.agent.id,
+      name: ma.agent.name,
+      bpsRate: ma.bpsRate,
+    })),
     mcc: merchant.mcc,
     approvalDate: merchant.approvalDate,
     riskLevel: merchant.riskLevel,
@@ -56,32 +62,46 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   const { id } = await params;
   const body = await req.json();
 
-  // Build update data dynamically
+  // Handle agent assignment operations
+  if (body.addAgent) {
+    const { agentId, bpsRate } = body.addAgent;
+    await prisma.merchantAgent.upsert({
+      where: { merchantId_agentId: { merchantId: id, agentId } },
+      create: { merchantId: id, agentId, bpsRate: bpsRate ?? null },
+      update: { bpsRate: bpsRate ?? null },
+    });
+    return NextResponse.json({ success: true });
+  }
+
+  if (body.removeAgent) {
+    const { agentId } = body.removeAgent;
+    await prisma.merchantAgent.deleteMany({
+      where: { merchantId: id, agentId },
+    });
+    return NextResponse.json({ success: true });
+  }
+
+  if (body.updateAgentBps) {
+    const { agentId, bpsRate } = body.updateAgentBps;
+    await prisma.merchantAgent.update({
+      where: { merchantId_agentId: { merchantId: id, agentId } },
+      data: { bpsRate },
+    });
+    return NextResponse.json({ success: true });
+  }
+
+  // Build update data for other merchant fields
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const data: any = {};
   if (body.dba !== undefined) data.dba = body.dba;
   if (body.status !== undefined) data.status = body.status;
   if (body.mcc !== undefined) data.mcc = body.mcc;
   if (body.hidden !== undefined) data.hidden = body.hidden;
-  if (body.bpsRate !== undefined) data.bpsRate = body.bpsRate;
-
-  // Agent assignment: can pass agentId or null to unassign
-  if ("agentId" in body) {
-    data.agentId = body.agentId || null;
-  }
 
   const merchant = await prisma.merchant.update({
     where: { id },
     data,
   });
-
-  // When agent changes, update all residual records for this merchant too
-  if ("agentId" in body) {
-    await prisma.residual.updateMany({
-      where: { merchantId: id },
-      data: { agentId: body.agentId || null },
-    });
-  }
 
   return NextResponse.json(merchant);
 }
@@ -90,6 +110,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
   const { id } = await params;
 
   await prisma.merchantTag.deleteMany({ where: { merchantId: id } });
+  await prisma.merchantAgent.deleteMany({ where: { merchantId: id } });
   await prisma.residual.deleteMany({ where: { merchantId: id } });
   await prisma.merchant.delete({ where: { id } });
 

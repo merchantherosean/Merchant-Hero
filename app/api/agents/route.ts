@@ -15,25 +15,46 @@ export async function GET(req: Request) {
   const agents = await prisma.agent.findMany({
     where,
     include: {
-      _count: { select: { merchants: true } },
-      residuals: {
-        select: { volume: true, netCommission: true },
+      merchantAssignments: {
+        include: {
+          merchant: {
+            include: {
+              residuals: {
+                select: { volume: true, netCommission: true },
+              },
+            },
+          },
+        },
       },
     },
     orderBy: { name: "asc" },
   });
 
   return NextResponse.json(
-    agents.map((a) => ({
-      id: a.id,
-      name: a.name,
-      email: a.email,
-      phone: a.phone,
-      status: a.status,
-      merchantCount: a._count.merchants,
-      totalVolume: a.residuals.reduce((s, r) => s + r.volume, 0),
-      totalNet: a.residuals.reduce((s, r) => s + r.netCommission, 0),
-    }))
+    agents.map((a) => {
+      let totalVolume = 0;
+      let totalEarnings = 0;
+
+      for (const ma of a.merchantAssignments) {
+        const bps = ma.bpsRate ?? 0;
+        for (const r of ma.merchant.residuals) {
+          totalVolume += r.volume;
+          // Agent earnings = volume * (bpsRate / 10000)
+          totalEarnings += r.volume * (bps / 10000);
+        }
+      }
+
+      return {
+        id: a.id,
+        name: a.name,
+        email: a.email,
+        phone: a.phone,
+        status: a.status,
+        merchantCount: a.merchantAssignments.length,
+        totalVolume,
+        totalEarnings,
+      };
+    })
   );
 }
 

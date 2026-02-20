@@ -58,8 +58,7 @@ export async function POST(req: Request) {
     for (const record of result.records) {
       if (!record.mid) continue;
 
-      // Upsert agent if present
-      let agentId: string | undefined;
+      // Upsert agent if present (creates agent record but does NOT auto-assign to merchant)
       if (record.agentName) {
         const normalizedName = record.agentName.trim();
         if (normalizedName && normalizedName.toLowerCase() !== "merchant hero" && normalizedName.toLowerCase() !== "merchant hero llc") {
@@ -68,13 +67,9 @@ export async function POST(req: Request) {
             create: {
               name: normalizedName,
               status: "Active",
-              splitPercent: record.splitPercent,
             },
-            update: {
-              splitPercent: record.splitPercent ?? undefined,
-            },
+            update: {},
           });
-          agentId = agent.id;
 
           // Check if this was a new agent (created recently)
           const agentAge = Date.now() - new Date(agent.createdAt).getTime();
@@ -82,7 +77,7 @@ export async function POST(req: Request) {
         }
       }
 
-      // Upsert merchant
+      // Upsert merchant (no agent assignment — agents are assigned manually via UI)
       const merchant = await prisma.merchant.upsert({
         where: { mid: record.mid },
         create: {
@@ -90,12 +85,10 @@ export async function POST(req: Request) {
           dba: record.dba,
           processor,
           status: record.status || "Active",
-          agentId,
         },
         update: {
           dba: record.dba || undefined,
           status: record.status || undefined,
-          agentId: agentId || undefined,
         },
       });
 
@@ -103,7 +96,7 @@ export async function POST(req: Request) {
       const merchantAge = Date.now() - new Date(merchant.createdAt).getTime();
       if (merchantAge < 5000) newMerchants++;
 
-      // Upsert residual record
+      // Upsert residual record (pure financial data, no agent reference)
       await prisma.residual.upsert({
         where: {
           merchantId_processor_year_month: {
@@ -115,7 +108,6 @@ export async function POST(req: Request) {
         },
         create: {
           merchantId: merchant.id,
-          agentId,
           processor,
           year,
           month,
@@ -123,15 +115,12 @@ export async function POST(req: Request) {
           income: record.income,
           netCommission: record.netCommission,
           transactions: record.transactions,
-          splitPercent: record.splitPercent,
         },
         update: {
           volume: record.volume,
           income: record.income,
           netCommission: record.netCommission,
           transactions: record.transactions,
-          splitPercent: record.splitPercent,
-          agentId: agentId || undefined,
         },
       });
     }

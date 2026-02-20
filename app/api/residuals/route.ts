@@ -18,8 +18,17 @@ export async function GET(req: Request) {
   const residuals = await prisma.residual.findMany({
     where,
     include: {
-      merchant: { select: { mid: true, dba: true } },
-      agent: { select: { name: true } },
+      merchant: {
+        select: {
+          mid: true,
+          dba: true,
+          agents: {
+            include: {
+              agent: { select: { name: true } },
+            },
+          },
+        },
+      },
     },
     orderBy: { netCommission: "desc" },
   });
@@ -37,7 +46,7 @@ export async function GET(req: Request) {
       id: r.id,
       mid: r.merchant.mid,
       dba: r.merchant.dba,
-      agentName: r.agent?.name,
+      agents: r.merchant.agents.map((ma) => ma.agent.name),
       volume: r.volume,
       income: r.income,
       netCommission: r.netCommission,

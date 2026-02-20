@@ -14,42 +14,36 @@ model Merchant {
   processor    String
   status       String          @default("Active")
   hidden       Boolean         @default(false) // Hidden from agent reports but included in company P&L
-  agentId      String?
-  agent        Agent?          @relation(fields: [agentId], references: [id])
-  bpsRate      Float?          // Basis points rate for this merchant's agent (each location earns differently)
   mcc          String?
   approvalDate DateTime?
   riskLevel    String?
   residuals    Residual[]
   tags         MerchantTag[]
+  agents       MerchantAgent[]
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
 
   @@index([processor])
   @@index([status])
-  @@index([agentId])
   @@index([hidden])
 }
 
 model Agent {
-  id           String     @id @default(cuid())
-  name         String     @unique
-  email        String?
-  phone        String?
-  splitPercent Float?
-  status       String     @default("Active")
-  merchants    Merchant[]
-  residuals    Residual[]
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  id                  String          @id @default(cuid())
+  name                String          @unique
+  email               String?
+  phone               String?
+  splitPercent        Float?
+  status              String          @default("Active")
+  merchantAssignments MerchantAgent[]
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
 }
 
 model Residual {
   id            String   @id @default(cuid())
   merchantId    String
   merchant      Merchant @relation(fields: [merchantId], references: [id])
-  agentId       String?
-  agent         Agent?   @relation(fields: [agentId], references: [id])
   processor     String
   year          Int
   month         Int
@@ -57,12 +51,10 @@ model Residual {
   income        Float    @default(0)
   netCommission Float    @default(0)
   transactions  Int      @default(0)
-  splitPercent  Float?
   createdAt     DateTime @default(now())
 
   @@unique([merchantId, processor, year, month])
   @@index([year, month])
-  @@index([agentId])
   @@index([processor])
 }
 
@@ -100,6 +92,21 @@ model MerchantTag {
 
   @@unique([merchantId, tagId])
   @@index([tagId])
+}
+
+// Many-to-many: Merchant <-> Agent (each assignment has its own BPS rate)
+model MerchantAgent {
+  id         String   @id @default(cuid())
+  merchantId String
+  merchant   Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  agentId    String
+  agent      Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  bpsRate    Float?   // Basis points rate this agent earns on this merchant
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([merchantId, agentId])
+  @@index([agentId])
 }
 
 model Lead {

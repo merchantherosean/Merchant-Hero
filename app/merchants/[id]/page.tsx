@@ -8,13 +8,19 @@ import StatusBadge from "@/components/StatusBadge";
 import { formatCurrency, formatMonthYear } from "@/lib/formatters";
 import { PROCESSOR_LABELS, type Processor } from "@/lib/types";
 
+interface AgentInfo {
+  id: string;
+  name: string;
+  bpsRate: number | null;
+}
+
 interface MerchantDetail {
   id: string;
   mid: string;
   dba: string;
   processor: string;
   status: string;
-  agentName?: string;
+  agents: AgentInfo[];
   mcc?: string;
   approvalDate?: string;
   riskLevel?: string;
@@ -101,9 +107,9 @@ export default function MerchantDetailPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         {[
           { label: "Processor", value: PROCESSOR_LABELS[merchant.processor as Processor] || merchant.processor },
-          { label: "Agent", value: merchant.agentName || "Unassigned" },
           { label: "MCC", value: merchant.mcc || "—" },
           { label: "Risk Level", value: merchant.riskLevel || "—" },
+          { label: "Agents", value: merchant.agents.length > 0 ? `${merchant.agents.length} assigned` : "Unassigned" },
         ].map((item) => (
           <div
             key={item.label}
@@ -119,6 +125,30 @@ export default function MerchantDetailPage() {
           </div>
         ))}
       </div>
+
+      {/* Agent Assignments */}
+      {merchant.agents.length > 0 && (
+        <div
+          className="rounded-xl p-6 border mb-8"
+          style={{ background: "var(--bg-secondary)", borderColor: "var(--border)" }}
+        >
+          <h2 className="text-sm font-semibold mb-3" style={{ color: "var(--text-primary)" }}>
+            Agent Assignments
+          </h2>
+          <div className="space-y-2">
+            {merchant.agents.map((a) => (
+              <div key={a.id} className="flex items-center justify-between">
+                <Link href={`/users/${a.id}`} className="text-sm hover:underline" style={{ color: "#7c6aef" }}>
+                  {a.name}
+                </Link>
+                <span className="text-xs font-mono" style={{ color: "var(--text-secondary)" }}>
+                  {a.bpsRate != null ? `${a.bpsRate} BPS` : "No BPS set"}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Volume Chart */}
       {merchant.residuals.length > 0 && (

@@ -11,7 +11,7 @@ interface ResidualRow {
   id: string;
   mid: string;
   dba: string;
-  agentName?: string;
+  agents: string[];
   volume: number;
   income: number;
   netCommission: number;
@@ -379,7 +379,7 @@ export default function ResidualsPage() {
         <table className="w-full">
           <thead>
             <tr style={{ background: "var(--bg-tertiary)" }}>
-              {["DBA", "MID", "Agent", "Volume", "Income", "Net Commission", "Txns"].map((h) => (
+              {["DBA", "MID", "Agents", "Volume", "Income", "Net Commission", "Txns"].map((h) => (
                 <th
                   key={h}
                   className="text-left text-xs font-semibold uppercase tracking-wider px-4 py-2"
@@ -417,7 +417,7 @@ export default function ResidualsPage() {
                     {r.mid}
                   </td>
                   <td className="px-4 py-3 text-sm" style={{ color: "var(--text-secondary)" }}>
-                    {r.agentName || "—"}
+                    {r.agents.length > 0 ? r.agents.join(", ") : "—"}
                   </td>
                   <td className="px-4 py-3 text-sm" style={{ color: "var(--text-primary)" }}>
                     {formatCurrency(r.volume)}

@@ -19,7 +19,7 @@ export async function GET() {
   let monthlyVolume = 0;
   let monthlyNet = 0;
   let processorBreakdown: { processor: string; label: string; merchantCount: number; volume: number; net: number }[] = [];
-  let topAgents: { id: string; name: string; merchantCount: number; totalVolume: number; totalNet: number }[] = [];
+  let topAgents: { id: string; name: string; merchantCount: number; totalVolume: number; totalEarnings: number }[] = [];
   let topMerchants: { id: string; dba: string; processor: string; volume: number; net: number }[] = [];
 
   if (latestUpload) {
@@ -30,8 +30,19 @@ export async function GET() {
     const residuals = await prisma.residual.findMany({
       where: { year, month },
       include: {
-        merchant: { select: { id: true, dba: true, processor: true, hidden: true } },
-        agent: { select: { id: true, name: true } },
+        merchant: {
+          select: {
+            id: true,
+            dba: true,
+            processor: true,
+            hidden: true,
+            agents: {
+              include: {
+                agent: { select: { id: true, name: true } },
+              },
+            },
+          },
+        },
       },
     });
 
@@ -65,21 +76,25 @@ export async function GET() {
     monthlyNet = processorBreakdown.reduce((s, p) => s + p.net, 0);
 
     // Top agents (exclude hidden merchants from agent reports)
-    const agentMap = new Map<string, { id: string; name: string; merchantIds: Set<string>; volume: number; net: number }>();
+    // Calculate earnings via BPS rates from MerchantAgent
+    const agentMap = new Map<string, { id: string; name: string; merchantIds: Set<string>; volume: number; earnings: number }>();
     for (const r of residuals) {
-      if (r.agent && !r.merchant.hidden) {
-        const existing = agentMap.get(r.agent.id);
+      if (r.merchant.hidden) continue;
+      for (const ma of r.merchant.agents) {
+        const bps = ma.bpsRate ?? 0;
+        const earning = r.volume * (bps / 10000);
+        const existing = agentMap.get(ma.agent.id);
         if (existing) {
           existing.merchantIds.add(r.merchant.id);
           existing.volume += r.volume;
-          existing.net += r.netCommission;
+          existing.earnings += earning;
         } else {
-          agentMap.set(r.agent.id, {
-            id: r.agent.id,
-            name: r.agent.name,
+          agentMap.set(ma.agent.id, {
+            id: ma.agent.id,
+            name: ma.agent.name,
             merchantIds: new Set([r.merchant.id]),
             volume: r.volume,
-            net: r.netCommission,
+            earnings: earning,
           });
         }
       }
@@ -91,9 +106,9 @@ export async function GET() {
         name: a.name,
         merchantCount: a.merchantIds.size,
         totalVolume: a.volume,
-        totalNet: a.net,
+        totalEarnings: a.earnings,
       }))
-      .sort((a, b) => b.totalNet - a.totalNet)
+      .sort((a, b) => b.totalEarnings - a.totalEarnings)
       .slice(0, 10);
 
     // Top merchants by volume
