@@ -1,0 +1,454 @@
+"use client";
+
+import { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
+import {
+  Store, Search, Eye, EyeOff, UserPlus, UserMinus,
+  Tag as TagIcon, Plus, X, Check,
+} from "lucide-react";
+import StatusBadge from "@/components/StatusBadge";
+import { formatCurrency, formatNumber } from "@/lib/formatters";
+import { PROCESSOR_LABELS, type Processor } from "@/lib/types";
+
+interface TagInfo {
+  id: string;
+  name: string;
+  color: string;
+}
+
+interface MerchantRow {
+  id: string;
+  mid: string;
+  dba: string;
+  processor: string;
+  status: string;
+  hidden: boolean;
+  bpsRate: number | null;
+  agentId: string | null;
+  agentName: string | null;
+  latestVolume: number | null;
+  latestNet: number | null;
+  tags: TagInfo[];
+}
+
+interface AgentOption {
+  id: string;
+  name: string;
+}
+
+interface TagOption {
+  id: string;
+  name: string;
+  color: string;
+  merchantCount: number;
+  totalVolume: number;
+  totalNet: number;
+  merchants: { id: string; dba: string; volume: number; net: number }[];
+}
+
+export default function MerchantsPage() {
+  const [merchants, setMerchants] = useState<MerchantRow[]>([]);
+  const [agents, setAgents] = useState<AgentOption[]>([]);
+  const [tags, setTags] = useState<TagOption[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [processorFilter, setProcessorFilter] = useState("all");
+  const [showHidden, setShowHidden] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [assignModal, setAssignModal] = useState<string | null>(null);
+  const [assignAgentId, setAssignAgentId] = useState<string>("");
+  const [assignBps, setAssignBps] = useState<string>("");
+  const [tagModal, setTagModal] = useState(false);
+  const [newTagName, setNewTagName] = useState("");
+  const [selectedTagId, setSelectedTagId] = useState<string>("new");
+  const [tagFilter, setTagFilter] = useState<string>("all");
+
+  const fetchMerchants = useCallback(() => {
+    setLoading(true);
+    const params = new URLSearchParams();
+    if (search) params.set("search", search);
+    if (statusFilter !== "all") params.set("status", statusFilter);
+    if (processorFilter !== "all") params.set("processor", processorFilter);
+    if (showHidden) params.set("showHidden", "true");
+    if (tagFilter !== "all") params.set("tagId", tagFilter);
+    fetch(`/api/merchants?${params}`)
+      .then((r) => r.json())
+      .then(setMerchants)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [search, statusFilter, processorFilter, showHidden, tagFilter]);
+
+  const fetchAgents = () => {
+    fetch("/api/agents").then((r) => r.json()).then(setAgents).catch(console.error);
+  };
+
+  const fetchTags = () => {
+    fetch("/api/tags").then((r) => r.json()).then(setTags).catch(console.error);
+  };
+
+  useEffect(() => {
+    fetchMerchants();
+    fetchAgents();
+    fetchTags();
+  }, [fetchMerchants]);
+
+  const toggleHide = async (id: string, currentHidden: boolean) => {
+    await fetch(`/api/merchants/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ hidden: !currentHidden }),
+    });
+    fetchMerchants();
+  };
+
+  const handleAssign = async () => {
+    if (!assignModal) return;
+    await fetch(`/api/merchants/${assignModal}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        agentId: assignAgentId || null,
+        bpsRate: assignBps ? parseFloat(assignBps) : null,
+      }),
+    });
+    setAssignModal(null);
+    setAssignAgentId("");
+    setAssignBps("");
+    fetchMerchants();
+  };
+
+  const unassignAgent = async (id: string) => {
+    await fetch(`/api/merchants/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ agentId: null, bpsRate: null }),
+    });
+    fetchMerchants();
+  };
+
+  const toggleSelect = (id: string) => {
+    const next = new Set(selectedIds);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    setSelectedIds(next);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === merchants.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(merchants.map((m) => m.id)));
+    }
+  };
+
+  const handleTagSelected = async () => {
+    if (selectedIds.size === 0) return;
+    let tagId = selectedTagId;
+
+    if (selectedTagId === "new" && newTagName.trim()) {
+      const res = await fetch("/api/tags", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newTagName.trim() }),
+      });
+      const newTag = await res.json();
+      tagId = newTag.id;
+    }
+
+    if (tagId && tagId !== "new") {
+      await fetch("/api/tags", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: tagId, addMerchantIds: Array.from(selectedIds) }),
+      });
+    }
+
+    setTagModal(false);
+    setNewTagName("");
+    setSelectedTagId("new");
+    setSelectedIds(new Set());
+    fetchMerchants();
+    fetchTags();
+  };
+
+  const removeTag = async (tagId: string, merchantId: string) => {
+    await fetch("/api/tags", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: tagId, removeMerchantIds: [merchantId] }),
+    });
+    fetchMerchants();
+    fetchTags();
+  };
+
+  const selectedVolume = merchants
+    .filter((m) => selectedIds.has(m.id))
+    .reduce((s, m) => s + (m.latestVolume ?? 0), 0);
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold mb-1" style={{ color: "var(--text-primary)" }}>Merchants</h1>
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+            Manage your merchant portfolio across all processors
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <label className="flex items-center gap-2 text-xs cursor-pointer" style={{ color: "var(--text-muted)" }}>
+            <input type="checkbox" checked={showHidden} onChange={() => setShowHidden(!showHidden)} className="rounded" />
+            Show hidden
+          </label>
+          <span className="text-sm" style={{ color: "var(--text-muted)" }}>
+            <Store size={14} className="inline mr-1" />{merchants.length}
+          </span>
+        </div>
+      </div>
+
+      {/* Selection Bar */}
+      {selectedIds.size > 0 && (
+        <div className="flex items-center justify-between p-3 rounded-lg mb-4 border"
+          style={{ background: "var(--accent-bg)", borderColor: "rgba(124, 106, 239, 0.3)" }}>
+          <span className="text-sm font-medium" style={{ color: "#7c6aef" }}>
+            {selectedIds.size} selected &middot; Volume: {formatCurrency(selectedVolume)}
+          </span>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setTagModal(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white cursor-pointer"
+              style={{ background: "#7c6aef" }}>
+              <TagIcon size={12} /> Tag Selected
+            </button>
+            <button onClick={() => setSelectedIds(new Set())}
+              className="px-3 py-1.5 rounded-lg text-xs cursor-pointer" style={{ color: "var(--text-muted)" }}>
+              Clear
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Tag Filter Pills */}
+      {tags.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-5">
+          <button onClick={() => setTagFilter("all")}
+            className="px-3 py-1.5 rounded-full text-xs font-medium cursor-pointer transition-colors"
+            style={{
+              background: tagFilter === "all" ? "#7c6aef" : "var(--bg-secondary)",
+              color: tagFilter === "all" ? "white" : "var(--text-secondary)",
+              border: "1px solid var(--border)",
+            }}>
+            All Merchants
+          </button>
+          {tags.map((tag) => (
+            <button key={tag.id} onClick={() => setTagFilter(tagFilter === tag.id ? "all" : tag.id)}
+              className="px-3 py-1.5 rounded-full text-xs font-medium cursor-pointer transition-colors"
+              style={{
+                background: tagFilter === tag.id ? tag.color : "var(--bg-secondary)",
+                color: tagFilter === tag.id ? "white" : "var(--text-secondary)",
+                border: `1px solid ${tagFilter === tag.id ? tag.color : "var(--border)"}`,
+              }}>
+              {tag.name} ({tag.merchantCount}) &middot; {formatCurrency(tag.totalVolume)}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Filters */}
+      <div className="flex flex-wrap items-center gap-3 mb-6">
+        <div className="relative flex-1 min-w-[240px] max-w-md">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--text-muted)" }} />
+          <input type="text" placeholder="Search by name or MID..." value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-9 pr-4 py-2.5 rounded-lg text-sm outline-none transition-colors"
+            style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)" }} />
+        </div>
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
+          className="px-3 py-2.5 rounded-lg text-sm outline-none cursor-pointer"
+          style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-secondary)" }}>
+          <option value="all">All Status</option>
+          <option value="Active">Active</option>
+          <option value="Inactive">Inactive</option>
+          <option value="Closed">Closed</option>
+        </select>
+        <select value={processorFilter} onChange={(e) => setProcessorFilter(e.target.value)}
+          className="px-3 py-2.5 rounded-lg text-sm outline-none cursor-pointer"
+          style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-secondary)" }}>
+          <option value="all">All Processors</option>
+          <option value="signapay">SignaPay</option>
+          <option value="fiserv">Fiserv / Green Payments</option>
+          <option value="tsys">Transaction Company</option>
+          <option value="maverick">Maverick</option>
+        </select>
+      </div>
+
+      {/* Table */}
+      <div className="rounded-xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
+        <table className="w-full">
+          <thead>
+            <tr style={{ background: "var(--bg-tertiary)" }}>
+              <th className="w-10 px-3 py-3">
+                <input type="checkbox" checked={merchants.length > 0 && selectedIds.size === merchants.length}
+                  onChange={toggleSelectAll} className="rounded cursor-pointer" />
+              </th>
+              {["DBA Name", "MID", "Processor", "Status", "Agent", "BPS", "Volume", "Net", "Tags", ""].map((h) => (
+                <th key={h} className="text-left text-xs font-semibold uppercase tracking-wider px-3 py-3" style={{ color: "var(--text-muted)" }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr><td colSpan={11} className="px-4 py-12 text-center text-sm animate-pulse" style={{ color: "var(--text-muted)" }}>Loading...</td></tr>
+            ) : merchants.length === 0 ? (
+              <tr><td colSpan={11} className="px-4 py-12 text-center text-sm" style={{ color: "var(--text-muted)" }}>No merchants found. Upload residuals to get started.</td></tr>
+            ) : (
+              merchants.map((m) => (
+                <tr key={m.id} className="border-t transition-colors group"
+                  style={{ borderColor: "var(--border)", opacity: m.hidden ? 0.5 : 1 }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-secondary)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+                  <td className="px-3 py-3">
+                    <input type="checkbox" checked={selectedIds.has(m.id)} onChange={() => toggleSelect(m.id)} className="rounded cursor-pointer" />
+                  </td>
+                  <td className="px-3 py-3">
+                    <Link href={`/merchants/${m.id}`} className="text-sm font-medium hover:underline" style={{ color: "var(--text-primary)" }}>{m.dba}</Link>
+                    {m.hidden && <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded" style={{ background: "var(--bg-tertiary)", color: "var(--text-muted)" }}>HIDDEN</span>}
+                  </td>
+                  <td className="px-3 py-3 text-xs font-mono" style={{ color: "var(--text-secondary)" }}>{m.mid}</td>
+                  <td className="px-3 py-3">
+                    <span className="text-xs px-2 py-1 rounded-md" style={{ background: "var(--bg-tertiary)", color: "var(--text-secondary)" }}>
+                      {PROCESSOR_LABELS[m.processor as Processor] || m.processor}
+                    </span>
+                  </td>
+                  <td className="px-3 py-3"><StatusBadge status={m.status} /></td>
+                  <td className="px-3 py-3">
+                    {m.agentName ? (
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm" style={{ color: "var(--text-secondary)" }}>{m.agentName}</span>
+                        <button onClick={() => unassignAgent(m.id)}
+                          className="opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity"
+                          style={{ color: "#ef4444" }} title="Unassign agent">
+                          <UserMinus size={12} />
+                        </button>
+                      </div>
+                    ) : (
+                      <button onClick={() => { setAssignModal(m.id); setAssignAgentId(""); setAssignBps(m.bpsRate?.toString() || ""); }}
+                        className="text-xs cursor-pointer flex items-center gap-1" style={{ color: "#7c6aef" }}>
+                        <UserPlus size={12} /> Assign
+                      </button>
+                    )}
+                  </td>
+                  <td className="px-3 py-3 text-xs font-mono" style={{ color: m.bpsRate ? "var(--text-primary)" : "var(--text-muted)" }}>
+                    {m.bpsRate != null ? m.bpsRate : "—"}
+                  </td>
+                  <td className="px-3 py-3 text-sm" style={{ color: "var(--text-primary)" }}>
+                    {m.latestVolume != null ? formatCurrency(m.latestVolume) : "—"}
+                  </td>
+                  <td className="px-3 py-3 text-sm font-medium" style={{ color: "#34d399" }}>
+                    {m.latestNet != null ? formatCurrency(m.latestNet) : "—"}
+                  </td>
+                  <td className="px-3 py-3">
+                    <div className="flex flex-wrap gap-1">
+                      {m.tags.map((tag) => (
+                        <span key={tag.id} className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full text-white" style={{ background: tag.color }}>
+                          {tag.name}
+                          <button onClick={() => removeTag(tag.id, m.id)} className="cursor-pointer hover:opacity-70"><X size={8} /></button>
+                        </span>
+                      ))}
+                    </div>
+                  </td>
+                  <td className="px-3 py-3">
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => toggleHide(m.id, m.hidden)}
+                        className="p-1 rounded cursor-pointer transition-colors" style={{ color: "var(--text-muted)" }}
+                        title={m.hidden ? "Show in reports" : "Hide from reports"}>
+                        {m.hidden ? <EyeOff size={14} /> : <Eye size={14} />}
+                      </button>
+                      <button onClick={() => { setAssignModal(m.id); setAssignAgentId(m.agentId || ""); setAssignBps(m.bpsRate?.toString() || ""); }}
+                        className="p-1 rounded cursor-pointer transition-colors" style={{ color: "var(--text-muted)" }} title="Assign agent & BPS">
+                        <UserPlus size={14} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Assign Agent Modal */}
+      {assignModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-sm rounded-xl p-6 border" style={{ background: "var(--bg-primary)", borderColor: "var(--border)" }}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold" style={{ color: "var(--text-primary)" }}>Assign Agent & BPS</h2>
+              <button onClick={() => setAssignModal(null)} className="cursor-pointer" style={{ color: "var(--text-muted)" }}><X size={20} /></button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs mb-1.5" style={{ color: "var(--text-muted)" }}>Agent</label>
+                <select value={assignAgentId} onChange={(e) => setAssignAgentId(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-lg text-sm outline-none cursor-pointer"
+                  style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)" }}>
+                  <option value="">Unassigned</option>
+                  {agents.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs mb-1.5" style={{ color: "var(--text-muted)" }}>BPS Rate (basis points)</label>
+                <input type="number" step="0.01" placeholder="e.g. 15.5" value={assignBps}
+                  onChange={(e) => setAssignBps(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-lg text-sm outline-none"
+                  style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)" }} />
+                <p className="text-[10px] mt-1" style={{ color: "var(--text-muted)" }}>Each agent earns a different BPS rate per location</p>
+              </div>
+              <button onClick={handleAssign}
+                className="w-full py-2.5 rounded-lg text-sm font-medium text-white cursor-pointer" style={{ background: "#7c6aef" }}>
+                <Check size={14} className="inline mr-1.5" /> Save Assignment
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tag Modal */}
+      {tagModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-sm rounded-xl p-6 border" style={{ background: "var(--bg-primary)", borderColor: "var(--border)" }}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold" style={{ color: "var(--text-primary)" }}>Tag {selectedIds.size} Merchants</h2>
+              <button onClick={() => setTagModal(false)} className="cursor-pointer" style={{ color: "var(--text-muted)" }}><X size={20} /></button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs mb-1.5" style={{ color: "var(--text-muted)" }}>Choose or create a tag</label>
+                <select value={selectedTagId} onChange={(e) => setSelectedTagId(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-lg text-sm outline-none cursor-pointer"
+                  style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)" }}>
+                  <option value="new">+ Create New Tag</option>
+                  {tags.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </select>
+              </div>
+              {selectedTagId === "new" && (
+                <div>
+                  <label className="block text-xs mb-1.5" style={{ color: "var(--text-muted)" }}>Tag Name</label>
+                  <input type="text" placeholder="e.g. North Jersey, High Volume" value={newTagName}
+                    onChange={(e) => setNewTagName(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-lg text-sm outline-none"
+                    style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)" }} />
+                </div>
+              )}
+              <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                Combined volume: <strong style={{ color: "var(--text-primary)" }}>{formatCurrency(selectedVolume)}</strong>
+              </p>
+              <button onClick={handleTagSelected}
+                disabled={selectedTagId === "new" && !newTagName.trim()}
+                className="w-full py-2.5 rounded-lg text-sm font-medium text-white cursor-pointer disabled:opacity-50" style={{ background: "#7c6aef" }}>
+                <TagIcon size={14} className="inline mr-1.5" /> Apply Tag
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

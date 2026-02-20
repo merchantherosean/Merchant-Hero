@@ -1,0 +1,136 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Merchant {
+  id           String          @id @default(cuid())
+  mid          String          @unique
+  dba          String
+  processor    String
+  status       String          @default("Active")
+  hidden       Boolean         @default(false) // Hidden from agent reports but included in company P&L
+  agentId      String?
+  agent        Agent?          @relation(fields: [agentId], references: [id])
+  bpsRate      Float?          // Basis points rate for this merchant's agent (each location earns differently)
+  mcc          String?
+  approvalDate DateTime?
+  riskLevel    String?
+  residuals    Residual[]
+  tags         MerchantTag[]
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  @@index([processor])
+  @@index([status])
+  @@index([agentId])
+  @@index([hidden])
+}
+
+model Agent {
+  id           String     @id @default(cuid())
+  name         String     @unique
+  email        String?
+  phone        String?
+  splitPercent Float?
+  status       String     @default("Active")
+  merchants    Merchant[]
+  residuals    Residual[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model Residual {
+  id            String   @id @default(cuid())
+  merchantId    String
+  merchant      Merchant @relation(fields: [merchantId], references: [id])
+  agentId       String?
+  agent         Agent?   @relation(fields: [agentId], references: [id])
+  processor     String
+  year          Int
+  month         Int
+  volume        Float    @default(0)
+  income        Float    @default(0)
+  netCommission Float    @default(0)
+  transactions  Int      @default(0)
+  splitPercent  Float?
+  createdAt     DateTime @default(now())
+
+  @@unique([merchantId, processor, year, month])
+  @@index([year, month])
+  @@index([agentId])
+  @@index([processor])
+}
+
+model ResidualUpload {
+  id          String   @id @default(cuid())
+  processor   String
+  year        Int
+  month       Int
+  fileName    String
+  recordCount Int
+  totalVolume Float
+  totalNet    Float
+  rawCsvUrl   String?
+  uploadedAt  DateTime @default(now())
+
+  @@unique([processor, year, month])
+}
+
+// Tags for grouping merchants
+model Tag {
+  id        String        @id @default(cuid())
+  name      String        @unique
+  color     String        @default("#7c6aef") // Display color for the tag
+  merchants MerchantTag[]
+  createdAt DateTime      @default(now())
+}
+
+// Many-to-many: Merchant <-> Tag
+model MerchantTag {
+  id         String   @id @default(cuid())
+  merchantId String
+  merchant   Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  tagId      String
+  tag        Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([merchantId, tagId])
+  @@index([tagId])
+}
+
+model Lead {
+  id               String   @id @default(cuid())
+  businessName     String
+  ownerName        String?
+  email            String?
+  phone            String?
+  location         String?
+  industry         String?
+  confidenceScore  Int      @default(5)
+  source           String?
+  painPoints       String?
+  contactMethod    String?
+  followUpPriority String   @default("MEDIUM")
+  notes            String?
+  status           String   @default("New")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model AppLink {
+  id          String  @id @default(cuid())
+  title       String
+  url         String
+  description String?
+  category    String?
+  sortOrder   Int     @default(0)
+}
+
+model Setting {
+  key   String @id
+  value String
+}
