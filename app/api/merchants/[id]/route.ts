@@ -75,6 +75,14 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     data,
   });
 
+  // When agent changes, update all residual records for this merchant too
+  if ("agentId" in body) {
+    await prisma.residual.updateMany({
+      where: { merchantId: id },
+      data: { agentId: body.agentId || null },
+    });
+  }
+
   return NextResponse.json(merchant);
 }
 
