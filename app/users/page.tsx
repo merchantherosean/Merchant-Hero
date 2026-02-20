@@ -23,7 +23,7 @@ export default function UsersPage() {
   const [search, setSearch] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [newAgent, setNewAgent] = useState({ name: "", email: "", phone: "", splitPercent: "" });
+  const [newAgent, setNewAgent] = useState({ name: "", email: "", phone: "" });
 
   const fetchAgents = useCallback(() => {
     setLoading(true);
@@ -51,12 +51,11 @@ export default function UsersPage() {
           name: newAgent.name.trim(),
           email: newAgent.email.trim() || null,
           phone: newAgent.phone.trim() || null,
-          splitPercent: newAgent.splitPercent ? parseFloat(newAgent.splitPercent) : null,
         }),
       });
       if (res.ok) {
         setShowAddModal(false);
-        setNewAgent({ name: "", email: "", phone: "", splitPercent: "" });
+        setNewAgent({ name: "", email: "", phone: "" });
         fetchAgents();
       }
     } catch (err) {
@@ -242,28 +241,12 @@ export default function UsersPage() {
                   style={{ background: "var(--bg-primary)", border: "1px solid var(--border)", color: "var(--text-primary)" }}
                 />
               </div>
-              <div>
-                <label className="block text-xs mb-1" style={{ color: "var(--text-muted)" }}>
-                  Split Percent
-                </label>
-                <input
-                  type="number"
-                  value={newAgent.splitPercent}
-                  onChange={(e) => setNewAgent({ ...newAgent, splitPercent: e.target.value })}
-                  placeholder="e.g. 15"
-                  step="0.5"
-                  min="0"
-                  max="100"
-                  className="w-full px-3 py-2 rounded-lg text-sm outline-none"
-                  style={{ background: "var(--bg-primary)", border: "1px solid var(--border)", color: "var(--text-primary)" }}
-                />
-              </div>
             </div>
             <div className="flex justify-end gap-3 mt-6">
               <button
                 onClick={() => {
                   setShowAddModal(false);
-                  setNewAgent({ name: "", email: "", phone: "", splitPercent: "" });
+                  setNewAgent({ name: "", email: "", phone: "" });
                 }}
                 className="px-4 py-2 text-sm rounded-lg border transition-colors"
                 style={{ borderColor: "var(--border)", color: "var(--text-secondary)" }}
