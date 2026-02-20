@@ -14,6 +14,7 @@ model Merchant {
   processor    String
   status       String          @default("Active")
   hidden       Boolean         @default(false) // Hidden from agent reports but included in company P&L
+  lost         Boolean         @default(false) // Marked as lost location — stays hidden+closed, shows red
   mcc          String?
   approvalDate DateTime?
   riskLevel    String?
@@ -26,6 +27,7 @@ model Merchant {
   @@index([processor])
   @@index([status])
   @@index([hidden])
+  @@index([lost])
 }
 
 model Agent {

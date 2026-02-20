@@ -78,6 +78,12 @@ export async function POST(req: Request) {
       }
 
       // Upsert merchant (no agent assignment — agents are assigned manually via UI)
+      // If merchant is marked as "lost", preserve its hidden/closed/lost state
+      const existingMerchant = await prisma.merchant.findUnique({
+        where: { mid: record.mid },
+        select: { lost: true },
+      });
+
       const merchant = await prisma.merchant.upsert({
         where: { mid: record.mid },
         create: {
@@ -86,10 +92,15 @@ export async function POST(req: Request) {
           processor,
           status: record.status || "Active",
         },
-        update: {
-          dba: record.dba || undefined,
-          status: record.status || undefined,
-        },
+        update: existingMerchant?.lost
+          ? {
+              // Lost merchants: only update DBA, keep hidden+closed+lost intact
+              dba: record.dba || undefined,
+            }
+          : {
+              dba: record.dba || undefined,
+              status: record.status || undefined,
+            },
       });
 
       // Check if new merchant

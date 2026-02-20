@@ -22,9 +22,14 @@ export async function GET(req: Request) {
       { mid: { contains: search } },
     ];
   }
-  if (status && status !== "all") where.status = status;
+  if (status === "Lost") {
+    where.lost = true;
+    // Lost merchants are always hidden, so bypass the hidden filter
+  } else {
+    if (status && status !== "all") where.status = status;
+    if (!showHidden) where.hidden = false;
+  }
   if (processor && processor !== "all") where.processor = processor;
-  if (!showHidden) where.hidden = false;
   if (tagId) {
     where.tags = { some: { tagId } };
   }
@@ -64,6 +69,7 @@ export async function GET(req: Request) {
       processor: m.processor,
       status: m.status,
       hidden: m.hidden,
+      lost: m.lost,
       agents: m.agents.map((ma) => ({
         id: ma.agent.id,
         name: ma.agent.name,
