@@ -44,7 +44,6 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     processor: merchant.processor,
     status: merchant.status,
     hidden: merchant.hidden,
-    lost: merchant.lost,
     agents: merchant.agents.map((ma) => ({
       id: ma.agent.id,
       name: ma.agent.name,
@@ -89,24 +88,6 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       data: { bpsRate },
     });
     return NextResponse.json({ success: true });
-  }
-
-  // Mark as Lost — sets lost=true, hidden=true, status=Closed
-  if (body.markLost) {
-    const merchant = await prisma.merchant.update({
-      where: { id },
-      data: { lost: true, hidden: true, status: "Closed" },
-    });
-    return NextResponse.json(merchant);
-  }
-
-  // Unmark Lost — sets lost=false (keeps hidden/status as-is for manual adjustment)
-  if (body.unmarkLost) {
-    const merchant = await prisma.merchant.update({
-      where: { id },
-      data: { lost: false, hidden: false, status: "Active" },
-    });
-    return NextResponse.json(merchant);
   }
 
   // Build update data for other merchant fields

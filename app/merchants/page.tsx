@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import {
   Store, Search, Eye, EyeOff, UserPlus, UserMinus,
-  Tag as TagIcon, Plus, X, Check, AlertTriangle, RotateCcw,
+  Tag as TagIcon, Plus, X, Check,
 } from "lucide-react";
 import StatusBadge from "@/components/StatusBadge";
 import { formatCurrency, formatNumber } from "@/lib/formatters";
@@ -29,7 +29,6 @@ interface MerchantRow {
   processor: string;
   status: string;
   hidden: boolean;
-  lost: boolean;
   agents: AgentAssignment[];
   latestVolume: number | null;
   latestNet: number | null;
@@ -114,15 +113,6 @@ export default function MerchantsPage() {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ hidden: !currentHidden }),
-    });
-    fetchMerchants();
-  };
-
-  const toggleLost = async (id: string, currentLost: boolean) => {
-    await fetch(`/api/merchants/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(currentLost ? { unmarkLost: true } : { markLost: true }),
     });
     fetchMerchants();
   };
@@ -348,7 +338,6 @@ export default function MerchantsPage() {
           <option value="Active">Active</option>
           <option value="Inactive">Inactive</option>
           <option value="Closed">Closed</option>
-          <option value="Lost">Lost</option>
         </select>
         <select value={processorFilter} onChange={(e) => setProcessorFilter(e.target.value)}
           className="px-3 py-2.5 rounded-lg text-sm outline-none cursor-pointer"
@@ -383,22 +372,17 @@ export default function MerchantsPage() {
             ) : (
               merchants.map((m) => (
                 <tr key={m.id} className="border-t transition-colors group"
-                  style={{
-                    borderColor: "var(--border)",
-                    opacity: m.hidden && !m.lost ? 0.5 : 1,
-                    background: m.lost ? "rgba(239, 68, 68, 0.08)" : "transparent",
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = m.lost ? "rgba(239, 68, 68, 0.14)" : "var(--bg-secondary)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = m.lost ? "rgba(239, 68, 68, 0.08)" : "transparent")}>
+                  style={{ borderColor: "var(--border)", opacity: m.hidden ? 0.5 : 1 }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-secondary)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
                   <td className="px-3 py-3">
                     <input type="checkbox" checked={selectedIds.has(m.id)} onChange={() => toggleSelect(m.id)} className="rounded cursor-pointer" />
                   </td>
                   <td className="px-3 py-3">
-                    <Link href={`/merchants/${m.id}`} className="text-sm font-medium hover:underline" style={{ color: m.lost ? "#ef4444" : "var(--text-primary)" }}>{m.dba}</Link>
-                    {m.lost && <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded font-medium" style={{ background: "rgba(239, 68, 68, 0.15)", color: "#ef4444" }}>LOST</span>}
-                    {m.hidden && !m.lost && <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded" style={{ background: "var(--bg-tertiary)", color: "var(--text-muted)" }}>HIDDEN</span>}
+                    <Link href={`/merchants/${m.id}`} className="text-sm font-medium hover:underline" style={{ color: "var(--text-primary)" }}>{m.dba}</Link>
+                    {m.hidden && <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded" style={{ background: "var(--bg-tertiary)", color: "var(--text-muted)" }}>HIDDEN</span>}
                   </td>
-                  <td className="px-3 py-3 text-xs font-mono" style={{ color: m.lost ? "#ef4444" : "var(--text-secondary)" }}>{m.mid}</td>
+                  <td className="px-3 py-3 text-xs font-mono" style={{ color: "var(--text-secondary)" }}>{m.mid}</td>
                   <td className="px-3 py-3">
                     <span className="text-xs px-2 py-1 rounded-md" style={{ background: "var(--bg-tertiary)", color: "var(--text-secondary)" }}>
                       {PROCESSOR_LABELS[m.processor as Processor] || m.processor}
@@ -446,10 +430,10 @@ export default function MerchantsPage() {
                       </button>
                     )}
                   </td>
-                  <td className="px-3 py-3 text-sm" style={{ color: m.lost ? "#ef4444" : "var(--text-primary)" }}>
+                  <td className="px-3 py-3 text-sm" style={{ color: "var(--text-primary)" }}>
                     {m.latestVolume != null ? formatCurrency(m.latestVolume) : "—"}
                   </td>
-                  <td className="px-3 py-3 text-sm font-medium" style={{ color: m.lost ? "#ef4444" : "#34d399" }}>
+                  <td className="px-3 py-3 text-sm font-medium" style={{ color: "#34d399" }}>
                     {m.latestNet != null ? formatCurrency(m.latestNet) : "—"}
                   </td>
                   <td className="px-3 py-3">
@@ -464,26 +448,11 @@ export default function MerchantsPage() {
                   </td>
                   <td className="px-3 py-3">
                     <div className="flex items-center gap-1">
-                      {m.lost ? (
-                        <button onClick={() => toggleLost(m.id, true)}
-                          className="p-1 rounded cursor-pointer transition-colors" style={{ color: "#34d399" }}
-                          title="Restore merchant">
-                          <RotateCcw size={14} />
-                        </button>
-                      ) : (
-                        <>
-                          <button onClick={() => toggleLost(m.id, false)}
-                            className="p-1 rounded cursor-pointer transition-colors" style={{ color: "#ef4444" }}
-                            title="Mark as Lost">
-                            <AlertTriangle size={14} />
-                          </button>
-                          <button onClick={() => toggleHide(m.id, m.hidden)}
-                            className="p-1 rounded cursor-pointer transition-colors" style={{ color: "var(--text-muted)" }}
-                            title={m.hidden ? "Show in reports" : "Hide from reports"}>
-                            {m.hidden ? <EyeOff size={14} /> : <Eye size={14} />}
-                          </button>
-                        </>
-                      )}
+                      <button onClick={() => toggleHide(m.id, m.hidden)}
+                        className="p-1 rounded cursor-pointer transition-colors" style={{ color: "var(--text-muted)" }}
+                        title={m.hidden ? "Show in reports" : "Hide from reports"}>
+                        {m.hidden ? <EyeOff size={14} /> : <Eye size={14} />}
+                      </button>
                       <button onClick={() => openManageModal(m)}
                         className="p-1 rounded cursor-pointer transition-colors" style={{ color: "var(--text-muted)" }} title="Manage agents">
                         <UserPlus size={14} />

@@ -20,7 +20,6 @@ interface MerchantDetail {
   dba: string;
   processor: string;
   status: string;
-  lost: boolean;
   agents: AgentInfo[];
   mcc?: string;
   approvalDate?: string;
@@ -103,18 +102,6 @@ export default function MerchantDetailPage() {
         </div>
         <StatusBadge status={merchant.status} />
       </div>
-
-      {/* Lost Banner */}
-      {merchant.lost && (
-        <div
-          className="flex items-center gap-2 p-3 rounded-lg mb-6"
-          style={{ background: "rgba(239, 68, 68, 0.1)", border: "1px solid rgba(239, 68, 68, 0.3)" }}
-        >
-          <span className="text-sm font-medium" style={{ color: "#ef4444" }}>
-            This merchant has been marked as a lost location. It will remain hidden and closed during future uploads.
-          </span>
-        </div>
-      )}
 
       {/* Info Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
