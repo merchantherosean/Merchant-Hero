@@ -139,6 +139,7 @@ export function generateAgentReport(data: ReportData): void {
     autoTable(doc, {
       startY: y,
       margin: { left: margin, right: margin },
+      showFoot: "lastPage",
       head: [["#", "Location (DBA)", "Volume", "BPS Rate", "Net Profit"]],
       body: data.merchants.map((m, i) => [
         (i + 1).toString(),
