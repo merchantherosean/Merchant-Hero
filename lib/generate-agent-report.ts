@@ -144,7 +144,7 @@ export function generateAgentReport(data: ReportData): void {
         (i + 1).toString(),
         m.dba,
         fmtCurrency(m.volume),
-        m.bpsRate.toFixed(1),
+        m.bpsRate % 1 === 0 ? m.bpsRate.toString() : m.bpsRate.toFixed(1),
         fmtCurrency(m.netProfit),
       ]),
       // Header styling — lime green
