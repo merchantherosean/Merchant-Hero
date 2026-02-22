@@ -116,56 +116,9 @@ export function generateAgentReport(data: ReportData): void {
   }
 
   // ──────────────────────────────────────────────
-  // SUMMARY CARDS
-  // ──────────────────────────────────────────────
-  y += 6;
-  const cardWidth = (contentWidth - 20) / 3;
-  const cardHeight = 52;
-  const cardRadius = 6;
-
-  // Card 1: Merchants
-  doc.setFillColor(...LIME_GREEN_LIGHT);
-  doc.roundedRect(margin, y, cardWidth, cardHeight, cardRadius, cardRadius, "F");
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(...MUTED_TEXT);
-  doc.text("ACTIVE MERCHANTS", margin + 14, y + 18);
-  doc.setFontSize(18);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(...LIME_GREEN);
-  doc.text(data.totals.merchantCount.toString(), margin + 14, y + 40);
-
-  // Card 2: Total Volume
-  const card2X = margin + cardWidth + 10;
-  doc.setFillColor(245, 245, 245);
-  doc.roundedRect(card2X, y, cardWidth, cardHeight, cardRadius, cardRadius, "F");
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(...MUTED_TEXT);
-  doc.text("TOTAL VOLUME", card2X + 14, y + 18);
-  doc.setFontSize(18);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(...DARK_TEXT);
-  doc.text(fmtCurrency(data.totals.volume), card2X + 14, y + 40);
-
-  // Card 3: Net Profit
-  const card3X = margin + (cardWidth + 10) * 2;
-  doc.setFillColor(...LIME_GREEN_LIGHT);
-  doc.roundedRect(card3X, y, cardWidth, cardHeight, cardRadius, cardRadius, "F");
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(...MUTED_TEXT);
-  doc.text("NET PROFIT", card3X + 14, y + 18);
-  doc.setFontSize(18);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(...LIME_GREEN);
-  doc.text(fmtCurrency(data.totals.netProfit), card3X + 14, y + 40);
-
-  y += cardHeight + 24;
-
-  // ──────────────────────────────────────────────
   // SECTION HEADER — "Merchant Breakdown"
   // ──────────────────────────────────────────────
+  y += 6;
   doc.setFillColor(...LIME_GREEN);
   doc.roundedRect(margin, y, 4, 16, 2, 2, "F");
   doc.setFontSize(13);
