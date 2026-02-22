@@ -54,6 +54,17 @@ export default function AgentDetailPage() {
       .finally(() => setLoading(false));
   }, [params.id]);
 
+  // Default report month/year to the most recent month with data
+  useEffect(() => {
+    if (agent && agent.monthlyEarnings.length > 0) {
+      const sorted = [...agent.monthlyEarnings].sort(
+        (a, b) => b.year - a.year || b.month - a.month
+      );
+      setReportMonth(sorted[0].month);
+      setReportYear(sorted[0].year);
+    }
+  }, [agent]);
+
   if (loading) {
     return (
       <div className="text-sm animate-pulse" style={{ color: "var(--text-muted)" }}>
@@ -104,17 +115,6 @@ export default function AgentDetailPage() {
       setGenerating(false);
     }
   }
-
-  // Default report month/year to the most recent month with data
-  useEffect(() => {
-    if (agent && agent.monthlyEarnings.length > 0) {
-      const sorted = [...agent.monthlyEarnings].sort(
-        (a, b) => b.year - a.year || b.month - a.month
-      );
-      setReportMonth(sorted[0].month);
-      setReportYear(sorted[0].year);
-    }
-  }, [agent]);
 
   const totalVolume = agent.monthlyEarnings.reduce((s, e) => s + e.volume, 0);
   const totalEarnings = agent.monthlyEarnings.reduce((s, e) => s + e.earnings, 0);
