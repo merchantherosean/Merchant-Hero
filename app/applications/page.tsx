@@ -61,7 +61,7 @@ export default function ApplicationsPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold mb-1" style={{ color: "var(--text-primary)" }}>
+          <h1 className="text-2xl font-bold mb-1" style={{ color: "#5B8C2A" }}>
             Applications
           </h1>
           <p className="text-sm" style={{ color: "var(--text-muted)" }}>

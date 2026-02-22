@@ -116,7 +116,7 @@ export default function ReportingPage() {
     <div>
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold mb-1" style={{ color: "var(--text-primary)" }}>
+          <h1 className="text-2xl font-bold mb-1" style={{ color: "#5B8C2A" }}>
             Reporting
           </h1>
           <p className="text-sm" style={{ color: "var(--text-muted)" }}>
@@ -294,7 +294,7 @@ export default function ReportingPage() {
                   data.topMerchants.slice(0, 15).map((m, i) => (
                     <tr key={m.id} className="border-t" style={{ borderColor: "var(--border)" }}>
                       <td className="px-4 py-3 text-xs font-mono" style={{ color: "var(--text-muted)" }}>{i + 1}</td>
-                      <td className="px-4 py-3 text-sm font-medium" style={{ color: "var(--text-primary)" }}>{m.dba}</td>
+                      <td className="px-4 py-3 text-sm font-medium" style={{ color: "#5B8C2A" }}>{m.dba}</td>
                       <td className="px-4 py-3">
                         <span className="text-xs px-2 py-1 rounded-md" style={{ background: "var(--bg-tertiary)", color: "var(--text-secondary)" }}>
                           {PROCESSOR_LABELS[m.processor as Processor] || m.processor}

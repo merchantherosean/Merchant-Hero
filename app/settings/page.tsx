@@ -9,7 +9,7 @@ export default function SettingsPage() {
   return (
     <div className="max-w-2xl">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold mb-1" style={{ color: "var(--text-primary)" }}>
+        <h1 className="text-2xl font-bold mb-1" style={{ color: "#5B8C2A" }}>
           Settings
         </h1>
         <p className="text-sm" style={{ color: "var(--text-muted)" }}>

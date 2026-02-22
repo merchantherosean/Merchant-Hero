@@ -125,7 +125,7 @@ export default function ResidualsPage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-2xl font-bold mb-1" style={{ color: "var(--text-primary)" }}>
+        <h1 className="text-2xl font-bold mb-1" style={{ color: "#5B8C2A" }}>
           Residuals
         </h1>
         <p className="text-sm" style={{ color: "var(--text-muted)" }}>
@@ -410,7 +410,7 @@ export default function ResidualsPage() {
                   className="border-t"
                   style={{ borderColor: "var(--border)" }}
                 >
-                  <td className="px-4 py-3 text-sm font-medium" style={{ color: "var(--text-primary)" }}>
+                  <td className="px-4 py-3 text-sm font-medium" style={{ color: "#5B8C2A" }}>
                     {r.dba}
                   </td>
                   <td className="px-4 py-3 text-sm font-mono" style={{ color: "var(--text-secondary)" }}>

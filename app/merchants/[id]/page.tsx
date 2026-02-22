@@ -92,7 +92,7 @@ export default function MerchantDetailPage() {
             <Store size={24} style={{ color: "#5B8C2A" }} />
           </div>
           <div>
-            <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
+            <h1 className="text-2xl font-bold" style={{ color: "#5B8C2A" }}>
               {merchant.dba}
             </h1>
             <p className="text-sm font-mono" style={{ color: "var(--text-muted)" }}>

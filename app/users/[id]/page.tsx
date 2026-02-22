@@ -177,7 +177,7 @@ export default function AgentDetailPage() {
             {agent.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
           </div>
           <div>
-            <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
+            <h1 className="text-2xl font-bold" style={{ color: "#5B8C2A" }}>
               {agent.name}
             </h1>
             <div className="flex items-center gap-3 mt-1">
@@ -336,7 +336,7 @@ export default function AgentDetailPage() {
               agent.merchants.map((m) => (
                 <tr key={m.id} className="border-t" style={{ borderColor: "var(--border)" }}>
                   <td className="px-4 py-3">
-                    <Link href={`/merchants/${m.id}`} className="text-sm font-medium hover:underline" style={{ color: "var(--text-primary)" }}>
+                    <Link href={`/merchants/${m.id}`} className="text-sm font-medium hover:underline" style={{ color: "#5B8C2A" }}>
                       {m.dba}
                     </Link>
                   </td>

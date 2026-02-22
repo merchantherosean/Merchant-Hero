@@ -322,7 +322,7 @@ export default function MerchantsPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold mb-1" style={{ color: "var(--text-primary)" }}>Merchants</h1>
+          <h1 className="text-2xl font-bold mb-1" style={{ color: "#5B8C2A" }}>Merchants</h1>
           <p className="text-sm" style={{ color: "var(--text-muted)" }}>
             Manage your merchant portfolio across all processors
           </p>
@@ -477,7 +477,7 @@ export default function MerchantsPage() {
                     <input type="checkbox" checked={selectedIds.has(m.id)} onChange={() => toggleSelect(m.id)} className="rounded cursor-pointer" />
                   </td>
                   <td className="px-3 py-3">
-                    <Link href={`/merchants/${m.id}`} className="text-sm font-medium hover:underline" style={{ color: "var(--text-primary)" }}>{m.dba}</Link>
+                    <Link href={`/merchants/${m.id}`} className="text-sm font-medium hover:underline" style={{ color: "#5B8C2A" }}>{m.dba}</Link>
                     {m.hidden && <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded" style={{ background: "var(--bg-tertiary)", color: "var(--text-muted)" }}>HIDDEN</span>}
                   </td>
                   <td className="px-3 py-3 text-xs font-mono" style={{ color: "var(--text-secondary)" }}>{m.mid}</td>
