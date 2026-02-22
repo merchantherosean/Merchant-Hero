@@ -65,7 +65,7 @@ export async function GET(
   const agentTagNames = new Map(agent.tags.map((at) => [at.tag.id, at.tag.name]));
 
   // Build per-merchant data, grouping by agent-assigned tags
-  const tagGroups = new Map<string, { name: string; volume: number; netProfit: number; count: number }>();
+  const tagGroups = new Map<string, { name: string; volume: number; netProfit: number; count: number; bpsRates: Set<number> }>();
   const individualMerchants: {
     dba: string;
     mid: string;
@@ -96,12 +96,14 @@ export async function GET(
         existing.volume += volume;
         existing.netProfit += netProfit;
         existing.count += 1;
+        existing.bpsRates.add(bpsRate);
       } else {
         tagGroups.set(matchingTagId, {
           name: agentTagNames.get(matchingTagId) || "Unknown",
           volume,
           netProfit,
           count: 1,
+          bpsRates: new Set([bpsRate]),
         });
       }
     } else {
@@ -124,7 +126,7 @@ export async function GET(
     mid: "",
     processor: "",
     volume: g.volume,
-    bpsRate: null as number | null,
+    bpsRate: (g.bpsRates.size === 1 ? [...g.bpsRates][0] : null) as number | null,
     netProfit: g.netProfit,
     isGrouped: true,
     merchantCount: g.count,

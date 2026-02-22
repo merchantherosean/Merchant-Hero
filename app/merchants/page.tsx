@@ -77,6 +77,16 @@ export default function MerchantsPage() {
   const [addBps, setAddBps] = useState<string>("");
   const [saving, setSaving] = useState(false);
 
+  // Bulk operation modal states
+  const [bulkAssignModal, setBulkAssignModal] = useState(false);
+  const [bulkAgentId, setBulkAgentId] = useState<string>("");
+  const [bulkBps, setBulkBps] = useState<string>("");
+  const [bulkStatusModal, setBulkStatusModal] = useState(false);
+  const [bulkStatus, setBulkStatus] = useState<string>("Active");
+  const [bulkHideModal, setBulkHideModal] = useState(false);
+  const [bulkHidden, setBulkHidden] = useState<boolean>(true);
+  const [bulkSaving, setBulkSaving] = useState(false);
+
   const fetchMerchants = useCallback(() => {
     setLoading(true);
     const params = new URLSearchParams();
@@ -216,6 +226,79 @@ export default function MerchantsPage() {
     fetchTags();
   };
 
+  // ── Bulk Operations ──────────────────────────────
+  const handleBulkAssignAgent = async () => {
+    if (selectedIds.size === 0 || !bulkAgentId) return;
+    setBulkSaving(true);
+    try {
+      await fetch("/api/merchants/bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "assignAgent",
+          merchantIds: Array.from(selectedIds),
+          agentId: bulkAgentId,
+          bpsRate: bulkBps ? parseFloat(bulkBps) : null,
+        }),
+      });
+      setBulkAssignModal(false);
+      setBulkAgentId("");
+      setBulkBps("");
+      setSelectedIds(new Set());
+      fetchMerchants();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setBulkSaving(false);
+    }
+  };
+
+  const handleBulkUpdateStatus = async () => {
+    if (selectedIds.size === 0) return;
+    setBulkSaving(true);
+    try {
+      await fetch("/api/merchants/bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "updateStatus",
+          merchantIds: Array.from(selectedIds),
+          status: bulkStatus,
+        }),
+      });
+      setBulkStatusModal(false);
+      setSelectedIds(new Set());
+      fetchMerchants();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setBulkSaving(false);
+    }
+  };
+
+  const handleBulkSetHidden = async () => {
+    if (selectedIds.size === 0) return;
+    setBulkSaving(true);
+    try {
+      await fetch("/api/merchants/bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "setHidden",
+          merchantIds: Array.from(selectedIds),
+          hidden: bulkHidden,
+        }),
+      });
+      setBulkHideModal(false);
+      setSelectedIds(new Set());
+      fetchMerchants();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setBulkSaving(false);
+    }
+  };
+
   const removeTag = async (tagId: string, merchantId: string) => {
     await fetch("/api/tags", {
       method: "PUT",
@@ -286,7 +369,22 @@ export default function MerchantsPage() {
             <button onClick={() => setTagModal(true)}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white cursor-pointer"
               style={{ background: "#7c6aef" }}>
-              <TagIcon size={12} /> Tag Selected
+              <TagIcon size={12} /> Tag
+            </button>
+            <button onClick={() => setBulkAssignModal(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white cursor-pointer"
+              style={{ background: "#7c6aef" }}>
+              <UserPlus size={12} /> Assign Agent
+            </button>
+            <button onClick={() => setBulkStatusModal(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer"
+              style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)" }}>
+              Status
+            </button>
+            <button onClick={() => setBulkHideModal(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer"
+              style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)" }}>
+              <EyeOff size={12} /> Hide/Show
             </button>
             <button onClick={() => setSelectedIds(new Set())}
               className="px-3 py-1.5 rounded-lg text-xs cursor-pointer" style={{ color: "var(--text-muted)" }}>
@@ -569,6 +667,121 @@ export default function MerchantsPage() {
                 disabled={selectedTagId === "new" && !newTagName.trim()}
                 className="w-full py-2.5 rounded-lg text-sm font-medium text-white cursor-pointer disabled:opacity-50" style={{ background: "#7c6aef" }}>
                 <TagIcon size={14} className="inline mr-1.5" /> Apply Tag
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Assign Agent Modal */}
+      {bulkAssignModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-sm rounded-xl p-6 border" style={{ background: "var(--bg-primary)", borderColor: "var(--border)" }}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold" style={{ color: "var(--text-primary)" }}>
+                Assign Agent to {selectedIds.size} Merchants
+              </h2>
+              <button onClick={() => setBulkAssignModal(false)} className="cursor-pointer" style={{ color: "var(--text-muted)" }}><X size={20} /></button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs mb-1.5" style={{ color: "var(--text-muted)" }}>Select Agent</label>
+                <select value={bulkAgentId} onChange={(e) => setBulkAgentId(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-lg text-sm outline-none cursor-pointer"
+                  style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)" }}>
+                  <option value="">Choose an agent...</option>
+                  {agents.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs mb-1.5" style={{ color: "var(--text-muted)" }}>BPS Rate</label>
+                <input type="number" step="0.01" placeholder="e.g. 30" value={bulkBps}
+                  onChange={(e) => setBulkBps(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-lg text-sm outline-none"
+                  style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)" }} />
+                <p className="text-[10px] mt-1" style={{ color: "var(--text-muted)" }}>
+                  Agent earns volume &times; (BPS / 10,000). Leave blank for no rate.
+                </p>
+              </div>
+              <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                Combined volume: <strong style={{ color: "var(--text-primary)" }}>{formatCurrency(selectedVolume)}</strong>
+              </p>
+              <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>
+                If the agent is already assigned to a merchant, the BPS rate will be updated.
+              </p>
+              <button onClick={handleBulkAssignAgent}
+                disabled={!bulkAgentId || bulkSaving}
+                className="w-full py-2.5 rounded-lg text-sm font-medium text-white cursor-pointer disabled:opacity-50"
+                style={{ background: "#7c6aef" }}>
+                <UserPlus size={14} className="inline mr-1.5" />
+                {bulkSaving ? "Assigning..." : "Assign Agent"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Update Status Modal */}
+      {bulkStatusModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-sm rounded-xl p-6 border" style={{ background: "var(--bg-primary)", borderColor: "var(--border)" }}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold" style={{ color: "var(--text-primary)" }}>
+                Update Status for {selectedIds.size} Merchants
+              </h2>
+              <button onClick={() => setBulkStatusModal(false)} className="cursor-pointer" style={{ color: "var(--text-muted)" }}><X size={20} /></button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs mb-1.5" style={{ color: "var(--text-muted)" }}>New Status</label>
+                <select value={bulkStatus} onChange={(e) => setBulkStatus(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-lg text-sm outline-none cursor-pointer"
+                  style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)" }}>
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                  <option value="Closed">Closed</option>
+                </select>
+              </div>
+              <button onClick={handleBulkUpdateStatus}
+                disabled={bulkSaving}
+                className="w-full py-2.5 rounded-lg text-sm font-medium text-white cursor-pointer disabled:opacity-50"
+                style={{ background: "#7c6aef" }}>
+                {bulkSaving ? "Updating..." : "Update Status"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Hide/Show Modal */}
+      {bulkHideModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-sm rounded-xl p-6 border" style={{ background: "var(--bg-primary)", borderColor: "var(--border)" }}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold" style={{ color: "var(--text-primary)" }}>
+                Hide/Show {selectedIds.size} Merchants
+              </h2>
+              <button onClick={() => setBulkHideModal(false)} className="cursor-pointer" style={{ color: "var(--text-muted)" }}><X size={20} /></button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs mb-1.5" style={{ color: "var(--text-muted)" }}>Visibility</label>
+                <select value={bulkHidden ? "hide" : "show"}
+                  onChange={(e) => setBulkHidden(e.target.value === "hide")}
+                  className="w-full px-3 py-2.5 rounded-lg text-sm outline-none cursor-pointer"
+                  style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)" }}>
+                  <option value="hide">Hide from reports</option>
+                  <option value="show">Show in reports</option>
+                </select>
+              </div>
+              <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                Hidden merchants are excluded from agent commission reports but remain in company P&amp;L data.
+              </p>
+              <button onClick={handleBulkSetHidden}
+                disabled={bulkSaving}
+                className="w-full py-2.5 rounded-lg text-sm font-medium text-white cursor-pointer disabled:opacity-50"
+                style={{ background: "#7c6aef" }}>
+                {bulkSaving ? "Updating..." : bulkHidden ? "Hide Merchants" : "Show Merchants"}
               </button>
             </div>
           </div>
