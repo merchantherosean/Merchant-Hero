@@ -54,13 +54,11 @@ export function generateAgentReport(data: ReportData): void {
   const monthName = MONTHS[data.period.month - 1];
 
   // ──────────────────────────────────────────────
-  // HEADER — Dark brown bar with logo
+  // HEADER — White bar with logo
   // ──────────────────────────────────────────────
   const headerHeight = 90;
 
-  // Main dark bar
-  doc.setFillColor(...DARK_BROWN);
-  doc.rect(0, 0, pageWidth, headerHeight, "F");
+  // White header background (default page color, no fill needed)
 
   // Lime green accent strip at bottom of header
   doc.setFillColor(...LIME_GREEN);
@@ -79,18 +77,18 @@ export function generateAgentReport(data: ReportData): void {
     doc.setFont("helvetica", "bold");
     doc.text("MERCHANT", margin, headerHeight / 2 + 2);
     const merchantWidth = doc.getTextWidth("MERCHANT ");
-    doc.setTextColor(...WHITE);
+    doc.setTextColor(...DARK_BROWN);
     doc.text("HERO", margin + merchantWidth, headerHeight / 2 + 2);
   }
 
   // Report period badge on the right
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
-  doc.setTextColor(180, 180, 180);
+  doc.setTextColor(...MUTED_TEXT);
   doc.text("COMMISSION REPORT", pageWidth - margin, headerHeight / 2 - 8, { align: "right" });
   doc.setFontSize(14);
   doc.setFont("helvetica", "bold");
-  doc.setTextColor(...WHITE);
+  doc.setTextColor(...DARK_BROWN);
   doc.text(`${monthName} ${data.period.year}`, pageWidth - margin, headerHeight / 2 + 12, { align: "right" });
 
   // ──────────────────────────────────────────────
