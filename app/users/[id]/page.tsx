@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Users, Store, Trash2, FileText } from "lucide-react";
+import { ArrowLeft, Users, Store, Trash2, FileText, Tag, Plus, X } from "lucide-react";
 import StatusBadge from "@/components/StatusBadge";
 import StatsCard from "@/components/StatsCard";
 import { formatCurrency, formatMonthYear, formatNumber } from "@/lib/formatters";
@@ -32,6 +32,11 @@ interface AgentDetail {
     earnings: number;
     merchantCount: number;
   }[];
+  tags?: {
+    id: string;
+    name: string;
+    color: string;
+  }[];
 }
 
 export default function AgentDetailPage() {
@@ -45,6 +50,8 @@ export default function AgentDetailPage() {
   const [reportMonth, setReportMonth] = useState(new Date().getMonth() + 1);
   const [reportYear, setReportYear] = useState(new Date().getFullYear());
   const [generating, setGenerating] = useState(false);
+  const [showTagDropdown, setShowTagDropdown] = useState(false);
+  const [allTags, setAllTags] = useState<{ id: string; name: string; color: string }[]>([]);
 
   useEffect(() => {
     fetch(`/api/agents/${params.id}`)
@@ -116,6 +123,36 @@ export default function AgentDetailPage() {
     }
   }
 
+  async function fetchAllTags() {
+    const res = await fetch("/api/tags");
+    const data = await res.json();
+    setAllTags(data.map((t: { id: string; name: string; color: string }) => ({ id: t.id, name: t.name, color: t.color })));
+  }
+
+  async function handleAddTag(tagId: string) {
+    await fetch(`/api/agents/${params.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ addTagId: tagId }),
+    });
+    // Refresh agent data
+    const res = await fetch(`/api/agents/${params.id}`);
+    const data = await res.json();
+    setAgent(data);
+    setShowTagDropdown(false);
+  }
+
+  async function handleRemoveTag(tagId: string) {
+    await fetch(`/api/agents/${params.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ removeTagId: tagId }),
+    });
+    const res = await fetch(`/api/agents/${params.id}`);
+    const data = await res.json();
+    setAgent(data);
+  }
+
   const totalVolume = agent.monthlyEarnings.reduce((s, e) => s + e.volume, 0);
   const totalEarnings = agent.monthlyEarnings.reduce((s, e) => s + e.earnings, 0);
 
@@ -177,6 +214,68 @@ export default function AgentDetailPage() {
             <Trash2 size={14} />
             Delete
           </button>
+        </div>
+      </div>
+
+      {/* Report Tags */}
+      <div className="flex items-center gap-2 flex-wrap mb-8">
+        <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
+          Report Tags:
+        </span>
+        {(agent.tags || []).map((t) => (
+          <span
+            key={t.id}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium text-white"
+            style={{ background: t.color }}
+          >
+            {t.name}
+            <button
+              onClick={() => handleRemoveTag(t.id)}
+              className="hover:opacity-70 transition-opacity"
+            >
+              <X size={12} />
+            </button>
+          </span>
+        ))}
+        <div className="relative">
+          <button
+            onClick={() => {
+              fetchAllTags();
+              setShowTagDropdown(!showTagDropdown);
+            }}
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs border transition-colors"
+            style={{ borderColor: "var(--border)", color: "var(--text-muted)" }}
+          >
+            <Plus size={12} />
+            Add Tag
+          </button>
+          {showTagDropdown && (
+            <div
+              className="absolute top-full left-0 mt-1 w-48 rounded-lg border shadow-lg z-20 py-1 max-h-48 overflow-y-auto"
+              style={{ background: "var(--bg-secondary)", borderColor: "var(--border)" }}
+            >
+              {allTags
+                .filter((t) => !(agent.tags || []).some((at) => at.id === t.id))
+                .map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => handleAddTag(t.id)}
+                    className="w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors"
+                    style={{ color: "var(--text-primary)" }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg-tertiary)"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                  >
+                    <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: t.color }} />
+                    {t.name}
+                  </button>
+                ))}
+              {allTags.filter((t) => !(agent.tags || []).some((at) => at.id === t.id)).length === 0 && (
+                <div className="px-3 py-2 text-xs" style={{ color: "var(--text-muted)" }}>
+                  No more tags available
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

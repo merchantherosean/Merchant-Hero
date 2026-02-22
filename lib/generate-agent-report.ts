@@ -14,8 +14,10 @@ interface ReportMerchant {
   mid: string;
   processor: string;
   volume: number;
-  bpsRate: number;
+  bpsRate: number | null;
   netProfit: number;
+  isGrouped?: boolean;
+  merchantCount?: number;
 }
 
 interface ReportData {
@@ -136,17 +138,31 @@ export function generateAgentReport(data: ReportData): void {
     doc.setTextColor(...MUTED_TEXT);
     doc.text("No residual data available for this period.", margin, y + 20);
   } else {
+    // Build table body — grouped rows show tag name + count, individual rows show merchant name
+    const tableBody = data.merchants.map((m, i) => {
+      const label = m.isGrouped
+        ? `${m.dba} (${m.merchantCount} locations)`
+        : m.dba;
+      const bps = m.bpsRate != null ? String(Number(m.bpsRate)) : "—";
+      return [
+        (i + 1).toString(),
+        label,
+        fmtCurrency(m.volume),
+        bps,
+        fmtCurrency(m.netProfit),
+      ];
+    });
+
+    // Track which rows are grouped for styling
+    const groupedRowIndices = new Set(
+      data.merchants.map((m, i) => (m.isGrouped ? i : -1)).filter((i) => i >= 0)
+    );
+
     autoTable(doc, {
       startY: y,
       margin: { left: margin, right: margin },
       head: [["#", "Location (DBA)", "Volume", "BPS Rate", "Net Profit"]],
-      body: data.merchants.map((m, i) => [
-        (i + 1).toString(),
-        m.dba,
-        fmtCurrency(m.volume),
-        String(Number(m.bpsRate)),
-        fmtCurrency(m.netProfit),
-      ]),
+      body: tableBody,
       // Header styling — lime green
       headStyles: {
         fillColor: LIME_GREEN,
@@ -171,6 +187,13 @@ export function generateAgentReport(data: ReportData): void {
         2: { halign: "right", cellWidth: 130 },
         3: { halign: "center", cellWidth: 80 },
         4: { halign: "right", cellWidth: 130 },
+      },
+      // Bold grouped rows
+      didParseCell: (hookData) => {
+        if (hookData.section === "body" && groupedRowIndices.has(hookData.row.index)) {
+          hookData.cell.styles.fontStyle = "bold";
+          hookData.cell.styles.textColor = [...DARK_TEXT] as unknown as [number, number, number];
+        }
       },
       // Thin line between rows
       tableLineColor: [220, 220, 220],

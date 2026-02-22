@@ -9,6 +9,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const agent = await prisma.agent.findUnique({
     where: { id },
     include: {
+      tags: {
+        include: {
+          tag: { select: { id: true, name: true, color: true } },
+        },
+      },
       merchantAssignments: {
         include: {
           merchant: {
@@ -81,6 +86,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     merchantCount: e.merchants.size,
   }));
 
+  const tags = agent.tags.map((at) => ({
+    id: at.tag.id,
+    name: at.tag.name,
+    color: at.tag.color,
+  }));
+
   return NextResponse.json({
     id: agent.id,
     name: agent.name,
@@ -91,6 +102,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     createdAt: agent.createdAt,
     merchants,
     monthlyEarnings,
+    tags,
   });
 }
 
@@ -107,6 +119,25 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   const { id } = await params;
   const body = await req.json();
 
+  // Handle tag assignment
+  if (body.addTagId) {
+    await prisma.agentTag.upsert({
+      where: { agentId_tagId: { agentId: id, tagId: body.addTagId } },
+      create: { agentId: id, tagId: body.addTagId },
+      update: {},
+    });
+    return NextResponse.json({ success: true });
+  }
+
+  // Handle tag removal
+  if (body.removeTagId) {
+    await prisma.agentTag.deleteMany({
+      where: { agentId: id, tagId: body.removeTagId },
+    });
+    return NextResponse.json({ success: true });
+  }
+
+  // Regular agent update
   const agent = await prisma.agent.update({
     where: { id },
     data: {

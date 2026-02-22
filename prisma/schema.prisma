@@ -36,6 +36,7 @@ model Agent {
   splitPercent        Float?
   status              String          @default("Active")
   merchantAssignments MerchantAgent[]
+  tags                AgentTag[]
   createdAt           DateTime        @default(now())
   updatedAt           DateTime        @updatedAt
 }
@@ -79,6 +80,7 @@ model Tag {
   name      String        @unique
   color     String        @default("#7c6aef") // Display color for the tag
   merchants MerchantTag[]
+  agents    AgentTag[]
   createdAt DateTime      @default(now())
 }
 
@@ -107,6 +109,18 @@ model MerchantAgent {
 
   @@unique([merchantId, agentId])
   @@index([agentId])
+}
+
+// Many-to-many: Agent <-> Tag (for grouping merchants in reports)
+model AgentTag {
+  id      String @id @default(cuid())
+  agentId String
+  agent   Agent  @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  tagId   String
+  tag     Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([agentId, tagId])
+  @@index([tagId])
 }
 
 model Lead {
