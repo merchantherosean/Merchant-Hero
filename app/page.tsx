@@ -114,13 +114,13 @@ export default function Dashboard() {
           label="Total Agents"
           value={loading ? "..." : formatNumber(stats?.agentCount ?? 0)}
           icon={<Users size={20} />}
-          color="#60a5fa"
+          color="#5B8C2A"
         />
         <StatsCard
           label="Monthly Revenue"
           value={loading ? "..." : formatCurrencyCompact(stats?.monthlyNet ?? 0)}
           icon={<DollarSign size={20} />}
-          color="#fbbf24"
+          color="#5B8C2A"
         />
       </div>
 
