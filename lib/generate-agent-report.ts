@@ -1,5 +1,6 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { LOGO_BASE64 } from "./logo-base64";
 
 // Type augmentation for jspdf-autotable
 declare module "jspdf" {
@@ -24,11 +25,13 @@ interface ReportData {
   totals: { volume: number; netProfit: number; merchantCount: number };
 }
 
-const BRAND_PURPLE: [number, number, number] = [124, 106, 239];
-const BRAND_PURPLE_LIGHT: [number, number, number] = [245, 243, 255];
-const BRAND_GREEN: [number, number, number] = [52, 211, 153];
+// Brand colors from the Merchant Hero logo
+const LIME_GREEN: [number, number, number] = [91, 140, 42];    // #5B8C2A — "MERCHANT" green
+const LIME_GREEN_LIGHT: [number, number, number] = [240, 248, 232]; // Light green tint for rows
+const DARK_BROWN: [number, number, number] = [43, 24, 16];     // #2B1810 — "HERO" dark brown
 const DARK_TEXT: [number, number, number] = [30, 30, 30];
 const MUTED_TEXT: [number, number, number] = [120, 120, 120];
+const WHITE: [number, number, number] = [255, 255, 255];
 
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
@@ -48,56 +51,52 @@ export function generateAgentReport(data: ReportData): void {
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 40;
   const contentWidth = pageWidth - margin * 2;
+  const monthName = MONTHS[data.period.month - 1];
 
   // ──────────────────────────────────────────────
-  // HEADER — Purple gradient bar with branding
+  // HEADER — Dark brown bar with logo
   // ──────────────────────────────────────────────
-  const headerHeight = 80;
+  const headerHeight = 90;
 
-  // Main purple bar
-  doc.setFillColor(...BRAND_PURPLE);
+  // Main dark bar
+  doc.setFillColor(...DARK_BROWN);
   doc.rect(0, 0, pageWidth, headerHeight, "F");
 
-  // Subtle darker strip at bottom of header
-  doc.setFillColor(110, 92, 220);
-  doc.rect(0, headerHeight - 3, pageWidth, 3, "F");
+  // Lime green accent strip at bottom of header
+  doc.setFillColor(...LIME_GREEN);
+  doc.rect(0, headerHeight - 4, pageWidth, 4, "F");
 
-  // "MH" monogram — white rounded square
-  const logoX = margin;
-  const logoY = headerHeight / 2 - 18;
-  const logoSize = 36;
-
-  doc.setFillColor(255, 255, 255);
-  doc.roundedRect(logoX, logoY, logoSize, logoSize, 8, 8, "F");
-
-  doc.setTextColor(...BRAND_PURPLE);
-  doc.setFontSize(16);
-  doc.setFont("helvetica", "bold");
-  doc.text("MH", logoX + logoSize / 2, logoY + logoSize / 2 + 5.5, { align: "center" });
-
-  // Brand text
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(20);
-  doc.setFont("helvetica", "bold");
-  doc.text("Merchant Hero", logoX + logoSize + 14, headerHeight / 2 - 4);
-
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(220, 215, 255);
-  doc.text("COMMISSION REPORT", logoX + logoSize + 14, headerHeight / 2 + 14);
+  // Add the Merchant Hero logo
+  try {
+    // Logo image — positioned in the header
+    const logoHeight = 56;
+    const logoWidth = logoHeight * 2; // aspect ratio ~2:1
+    doc.addImage(LOGO_BASE64, "PNG", margin, (headerHeight - logoHeight) / 2 - 2, logoWidth, logoHeight);
+  } catch {
+    // Fallback: text-based logo
+    doc.setTextColor(...LIME_GREEN);
+    doc.setFontSize(22);
+    doc.setFont("helvetica", "bold");
+    doc.text("MERCHANT", margin, headerHeight / 2 + 2);
+    const merchantWidth = doc.getTextWidth("MERCHANT ");
+    doc.setTextColor(...WHITE);
+    doc.text("HERO", margin + merchantWidth, headerHeight / 2 + 2);
+  }
 
   // Report period badge on the right
-  const monthName = MONTHS[data.period.month - 1];
-  const periodText = `${monthName} ${data.period.year}`;
-  doc.setFontSize(12);
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(180, 180, 180);
+  doc.text("COMMISSION REPORT", pageWidth - margin, headerHeight / 2 - 8, { align: "right" });
+  doc.setFontSize(14);
   doc.setFont("helvetica", "bold");
-  doc.setTextColor(255, 255, 255);
-  doc.text(periodText, pageWidth - margin, headerHeight / 2 + 4, { align: "right" });
+  doc.setTextColor(...WHITE);
+  doc.text(`${monthName} ${data.period.year}`, pageWidth - margin, headerHeight / 2 + 12, { align: "right" });
 
   // ──────────────────────────────────────────────
   // AGENT INFO SECTION
   // ──────────────────────────────────────────────
-  let y = headerHeight + 36;
+  let y = headerHeight + 32;
 
   // Agent name — large
   doc.setTextColor(...DARK_TEXT);
@@ -127,7 +126,7 @@ export function generateAgentReport(data: ReportData): void {
   const cardRadius = 6;
 
   // Card 1: Merchants
-  doc.setFillColor(...BRAND_PURPLE_LIGHT);
+  doc.setFillColor(...LIME_GREEN_LIGHT);
   doc.roundedRect(margin, y, cardWidth, cardHeight, cardRadius, cardRadius, "F");
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
@@ -135,12 +134,12 @@ export function generateAgentReport(data: ReportData): void {
   doc.text("ACTIVE MERCHANTS", margin + 14, y + 18);
   doc.setFontSize(18);
   doc.setFont("helvetica", "bold");
-  doc.setTextColor(...BRAND_PURPLE);
+  doc.setTextColor(...LIME_GREEN);
   doc.text(data.totals.merchantCount.toString(), margin + 14, y + 40);
 
   // Card 2: Total Volume
   const card2X = margin + cardWidth + 10;
-  doc.setFillColor(...BRAND_PURPLE_LIGHT);
+  doc.setFillColor(245, 245, 245);
   doc.roundedRect(card2X, y, cardWidth, cardHeight, cardRadius, cardRadius, "F");
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
@@ -153,7 +152,7 @@ export function generateAgentReport(data: ReportData): void {
 
   // Card 3: Net Profit
   const card3X = margin + (cardWidth + 10) * 2;
-  doc.setFillColor(240, 253, 244); // Light green tint
+  doc.setFillColor(...LIME_GREEN_LIGHT);
   doc.roundedRect(card3X, y, cardWidth, cardHeight, cardRadius, cardRadius, "F");
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
@@ -161,7 +160,7 @@ export function generateAgentReport(data: ReportData): void {
   doc.text("NET PROFIT", card3X + 14, y + 18);
   doc.setFontSize(18);
   doc.setFont("helvetica", "bold");
-  doc.setTextColor(...BRAND_GREEN);
+  doc.setTextColor(...LIME_GREEN);
   doc.text(fmtCurrency(data.totals.netProfit), card3X + 14, y + 40);
 
   y += cardHeight + 24;
@@ -169,7 +168,7 @@ export function generateAgentReport(data: ReportData): void {
   // ──────────────────────────────────────────────
   // SECTION HEADER — "Merchant Breakdown"
   // ──────────────────────────────────────────────
-  doc.setFillColor(...BRAND_PURPLE);
+  doc.setFillColor(...LIME_GREEN);
   doc.roundedRect(margin, y, 4, 16, 2, 2, "F");
   doc.setFontSize(13);
   doc.setFont("helvetica", "bold");
@@ -204,18 +203,18 @@ export function generateAgentReport(data: ReportData): void {
         "",
         fmtCurrency(data.totals.netProfit),
       ]],
-      // Header styling
+      // Header styling — lime green
       headStyles: {
-        fillColor: BRAND_PURPLE,
-        textColor: [255, 255, 255],
+        fillColor: LIME_GREEN,
+        textColor: WHITE,
         fontStyle: "bold",
         fontSize: 9,
         cellPadding: { top: 8, bottom: 8, left: 10, right: 10 },
       },
-      // Footer (grand total) styling
+      // Footer (grand total) styling — dark background, white text
       footStyles: {
-        fillColor: [240, 240, 245],
-        textColor: DARK_TEXT,
+        fillColor: DARK_BROWN,
+        textColor: WHITE,
         fontStyle: "bold",
         fontSize: 10,
         cellPadding: { top: 10, bottom: 10, left: 10, right: 10 },
@@ -227,9 +226,9 @@ export function generateAgentReport(data: ReportData): void {
         cellPadding: { top: 7, bottom: 7, left: 10, right: 10 },
       },
       alternateRowStyles: {
-        fillColor: BRAND_PURPLE_LIGHT,
+        fillColor: LIME_GREEN_LIGHT,
       },
-      // Column configuration
+      // Column configuration — same widths for head, body, and foot
       columnStyles: {
         0: { halign: "center", cellWidth: 30, textColor: MUTED_TEXT },
         1: { cellWidth: "auto" },
@@ -237,14 +236,18 @@ export function generateAgentReport(data: ReportData): void {
         3: { halign: "center", cellWidth: 65 },
         4: { halign: "right", cellWidth: 100 },
       },
-      // Color the net profit total green
+      // Make the grand total net profit lime green for emphasis
       didParseCell: (hookData) => {
         if (hookData.section === "foot" && hookData.column.index === 4) {
-          hookData.cell.styles.textColor = [...BRAND_GREEN] as unknown as [number, number, number];
+          hookData.cell.styles.textColor = [...LIME_GREEN] as unknown as [number, number, number];
+        }
+        // Keep the # column muted in the footer too
+        if (hookData.section === "foot" && hookData.column.index === 0) {
+          hookData.cell.styles.textColor = [...DARK_BROWN] as unknown as [number, number, number];
         }
       },
-      // Rounded look — thin line between rows
-      tableLineColor: [230, 230, 230],
+      // Thin line between rows
+      tableLineColor: [220, 220, 220],
       tableLineWidth: 0.5,
     });
   }
@@ -256,9 +259,9 @@ export function generateAgentReport(data: ReportData): void {
     ? doc.lastAutoTable.finalY + 36
     : y + 56;
 
-  // Divider line
-  doc.setDrawColor(220, 220, 220);
-  doc.setLineWidth(0.5);
+  // Divider line — lime green
+  doc.setDrawColor(...LIME_GREEN);
+  doc.setLineWidth(1);
   doc.line(margin, finalY, pageWidth - margin, finalY);
 
   doc.setFontSize(8);
@@ -273,8 +276,10 @@ export function generateAgentReport(data: ReportData): void {
     margin,
     finalY + 16,
   );
+  doc.setTextColor(...DARK_BROWN);
+  doc.setFont("helvetica", "bold");
   doc.text(
-    "Merchant Hero \u2022 Confidential",
+    "Merchant Hero \u2022 We Don\u2019t Sell, We Rescue",
     pageWidth - margin,
     finalY + 16,
     { align: "right" },
