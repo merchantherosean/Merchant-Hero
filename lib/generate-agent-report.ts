@@ -181,7 +181,7 @@ export function generateAgentReport(data: ReportData): void {
       },
       // Column configuration — wider columns for landscape
       columnStyles: {
-        0: { halign: "center", cellWidth: 35, textColor: MUTED_TEXT },
+        0: { halign: "center", cellWidth: 45, textColor: MUTED_TEXT },
         1: { cellWidth: "auto" },
         2: { halign: "right", cellWidth: 130 },
         3: { halign: "center", cellWidth: 80 },
