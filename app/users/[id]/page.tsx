@@ -83,7 +83,7 @@ export default function AgentDetailPage() {
   if (!agent) {
     return (
       <div>
-        <Link href="/users" className="text-sm hover:underline" style={{ color: "#7c6aef" }}>
+        <Link href="/users" className="text-sm hover:underline" style={{ color: "#5B8C2A" }}>
           &larr; Back to Agents
         </Link>
         <p className="mt-4 text-sm" style={{ color: "var(--text-muted)" }}>Agent not found.</p>
@@ -161,7 +161,7 @@ export default function AgentDetailPage() {
       <Link
         href="/users"
         className="inline-flex items-center gap-1.5 text-sm mb-6 hover:underline"
-        style={{ color: "#7c6aef" }}
+        style={{ color: "#5B8C2A" }}
       >
         <ArrowLeft size={14} />
         Back to Agents
@@ -172,7 +172,7 @@ export default function AgentDetailPage() {
         <div className="flex items-center gap-4">
           <div
             className="w-14 h-14 rounded-xl flex items-center justify-center text-lg font-bold"
-            style={{ background: "var(--accent-bg)", color: "#7c6aef" }}
+            style={{ background: "var(--accent-bg)", color: "#5B8C2A" }}
           >
             {agent.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
           </div>
@@ -199,8 +199,8 @@ export default function AgentDetailPage() {
           <button
             onClick={() => setShowReportModal(true)}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border transition-colors"
-            style={{ color: "#7c6aef", borderColor: "#7c6aef" }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(124, 106, 239, 0.1)"; }}
+            style={{ color: "#5B8C2A", borderColor: "#5B8C2A" }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(91, 140, 42, 0.1)"; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
           >
             <FileText size={14} />
@@ -285,7 +285,7 @@ export default function AgentDetailPage() {
           label="Merchants"
           value={formatNumber(agent.merchants.length)}
           icon={<Store size={20} />}
-          color="#7c6aef"
+          color="#5B8C2A"
         />
         <StatsCard
           label="Total Volume"
@@ -348,7 +348,7 @@ export default function AgentDetailPage() {
                       {PROCESSOR_LABELS[m.processor as Processor] || m.processor}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-sm font-mono" style={{ color: m.bpsRate ? "#7c6aef" : "var(--text-muted)" }}>
+                  <td className="px-4 py-3 text-sm font-mono" style={{ color: m.bpsRate ? "#5B8C2A" : "var(--text-muted)" }}>
                     {m.bpsRate != null ? `${m.bpsRate}` : "—"}
                   </td>
                   <td className="px-4 py-3">
@@ -426,9 +426,9 @@ export default function AgentDetailPage() {
             <div className="flex items-center gap-3 mb-2">
               <div
                 className="w-9 h-9 rounded-lg flex items-center justify-center"
-                style={{ background: "rgba(124, 106, 239, 0.15)" }}
+                style={{ background: "rgba(91, 140, 42, 0.15)" }}
               >
-                <FileText size={18} color="#7c6aef" />
+                <FileText size={18} color="#5B8C2A" />
               </div>
               <h3 className="text-lg font-semibold" style={{ color: "var(--text-primary)" }}>
                 Generate Commission Report
@@ -490,7 +490,7 @@ export default function AgentDetailPage() {
                 onClick={handleGenerateReport}
                 disabled={generating}
                 className="inline-flex items-center gap-2 px-4 py-2 text-sm rounded-lg text-white transition-colors"
-                style={{ background: "#7c6aef" }}
+                style={{ background: "#5B8C2A" }}
               >
                 <FileText size={14} />
                 {generating ? "Generating..." : "Generate PDF"}

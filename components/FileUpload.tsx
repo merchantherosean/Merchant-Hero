@@ -46,10 +46,10 @@ export default function FileUpload({ onUpload, uploading = false, accept = ".csv
     <div>
       <div
         className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer ${
-          dragOver ? "border-[#7c6aef]" : ""
+          dragOver ? "border-[#5B8C2A]" : ""
         }`}
         style={{
-          borderColor: dragOver ? "#7c6aef" : "var(--border)",
+          borderColor: dragOver ? "#5B8C2A" : "var(--border)",
           background: dragOver ? "var(--accent-bg)" : "transparent",
         }}
         onDragOver={(e) => {
@@ -69,7 +69,7 @@ export default function FileUpload({ onUpload, uploading = false, accept = ".csv
         />
         <Upload size={24} className="mx-auto mb-2" style={{ color: "var(--text-muted)" }} />
         <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
-          Drag and drop a file here, or <span style={{ color: "#7c6aef" }}>browse</span>
+          Drag and drop a file here, or <span style={{ color: "#5B8C2A" }}>browse</span>
         </p>
         <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
           Supports CSV and Excel (.xlsx) files from SignaPay, Fiserv, TRNXN Company, and Maverick
@@ -82,7 +82,7 @@ export default function FileUpload({ onUpload, uploading = false, accept = ".csv
           style={{ background: "var(--bg-primary)", borderColor: "var(--border)" }}
         >
           <div className="flex items-center gap-2">
-            <FileText size={16} style={{ color: "#7c6aef" }} />
+            <FileText size={16} style={{ color: "#5B8C2A" }} />
             <div>
               <p className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
                 {selectedFile.name}
@@ -111,7 +111,7 @@ export default function FileUpload({ onUpload, uploading = false, accept = ".csv
               }}
               disabled={uploading}
               className="px-4 py-2 rounded-lg text-sm font-medium text-white cursor-pointer disabled:opacity-50"
-              style={{ background: "#7c6aef" }}
+              style={{ background: "#5B8C2A" }}
             >
               {uploading ? "Uploading..." : "Upload"}
             </button>

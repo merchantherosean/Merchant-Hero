@@ -100,7 +100,7 @@ export default function LeadsPage() {
         <button
           onClick={() => setShowForm(true)}
           className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-white cursor-pointer"
-          style={{ background: "#7c6aef" }}
+          style={{ background: "#5B8C2A" }}
         >
           <Plus size={16} />
           Add Lead
@@ -205,7 +205,7 @@ export default function LeadsPage() {
               <button
                 type="submit"
                 className="w-full py-2.5 rounded-lg text-sm font-medium text-white cursor-pointer"
-                style={{ background: "#7c6aef" }}
+                style={{ background: "#5B8C2A" }}
               >
                 Create Lead
               </button>
@@ -261,7 +261,7 @@ export default function LeadsPage() {
                       ))}
                     </select>
                   </td>
-                  <td className="px-4 py-3 text-sm font-medium" style={{ color: "#7c6aef" }}>
+                  <td className="px-4 py-3 text-sm font-medium" style={{ color: "#5B8C2A" }}>
                     {lead.confidenceScore}/10
                   </td>
                 </tr>

@@ -10,9 +10,9 @@
   --text-primary: #1a1a1a;
   --text-secondary: #666666;
   --text-muted: #999999;
-  --accent: #7c6aef;
-  --accent-hover: #6b5ce7;
-  --accent-bg: rgba(124, 106, 239, 0.1);
+  --accent: #5B8C2A;
+  --accent-hover: #4a7522;
+  --accent-bg: rgba(91, 140, 42, 0.1);
   --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
@@ -26,9 +26,9 @@
   --text-primary: #e8e8e8;
   --text-secondary: #888888;
   --text-muted: #666666;
-  --accent: #7c6aef;
-  --accent-hover: #6b5ce7;
-  --accent-bg: rgba(124, 106, 239, 0.15);
+  --accent: #5B8C2A;
+  --accent-hover: #4a7522;
+  --accent-bg: rgba(91, 140, 42, 0.15);
   --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 

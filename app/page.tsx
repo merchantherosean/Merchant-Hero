@@ -102,7 +102,7 @@ export default function Dashboard() {
           label="Total Merchants"
           value={loading ? "..." : formatNumber(stats?.merchantCount ?? 0)}
           icon={<Store size={20} />}
-          color="#7c6aef"
+          color="#5B8C2A"
         />
         <StatsCard
           label="Active Merchants"
@@ -147,7 +147,7 @@ export default function Dashboard() {
                       style={{
                         background:
                           p.processor === "signapay"
-                            ? "#7c6aef"
+                            ? "#5B8C2A"
                             : p.processor === "fiserv"
                             ? "#34d399"
                             : p.processor === "tsys"
@@ -231,9 +231,9 @@ export default function Dashboard() {
           <a
             href="/residuals"
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-white transition-colors"
-            style={{ background: "#7c6aef" }}
+            style={{ background: "#5B8C2A" }}
             onMouseEnter={(e) => (e.currentTarget.style.background = "#6b5ce7")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "#7c6aef")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "#5B8C2A")}
           >
             <TrendingUp size={16} />
             Upload Residuals

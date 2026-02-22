@@ -71,7 +71,7 @@ export default function ApplicationsPage() {
         <button
           onClick={() => setShowForm(true)}
           className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-white cursor-pointer"
-          style={{ background: "#7c6aef" }}
+          style={{ background: "#5B8C2A" }}
         >
           <Plus size={16} />
           Add Link
@@ -105,7 +105,7 @@ export default function ApplicationsPage() {
                 <label className="block text-xs mb-1" style={{ color: "var(--text-muted)" }}>Category</label>
                 <input name="category" placeholder="e.g. Forms, Booking, Funding" className="w-full px-3 py-2 rounded-lg text-sm outline-none" style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)" }} />
               </div>
-              <button type="submit" className="w-full py-2.5 rounded-lg text-sm font-medium text-white cursor-pointer" style={{ background: "#7c6aef" }}>
+              <button type="submit" className="w-full py-2.5 rounded-lg text-sm font-medium text-white cursor-pointer" style={{ background: "#5B8C2A" }}>
                 Add Link
               </button>
             </form>

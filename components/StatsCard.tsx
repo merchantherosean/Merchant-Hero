@@ -7,7 +7,7 @@ interface StatsCardProps {
   color?: string;
 }
 
-export default function StatsCard({ label, value, icon, color = "#7c6aef" }: StatsCardProps) {
+export default function StatsCard({ label, value, icon, color = "#5B8C2A" }: StatsCardProps) {
   return (
     <div
       className="rounded-xl p-5 border transition-colors"

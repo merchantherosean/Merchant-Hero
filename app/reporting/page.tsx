@@ -106,7 +106,7 @@ export default function ReportingPage() {
     : 1;
 
   const processorColors: Record<string, string> = {
-    signapay: "#7c6aef",
+    signapay: "#6366f1",
     fiserv: "#34d399",
     tsys: "#60a5fa",
     maverick: "#fbbf24",
@@ -189,7 +189,7 @@ export default function ReportingPage() {
                           className="h-full rounded-full transition-all"
                           style={{
                             width: `${(p.volume / maxVolume) * 100}%`,
-                            background: processorColors[p.processor] || "#7c6aef",
+                            background: processorColors[p.processor] || "#5B8C2A",
                           }}
                         />
                       </div>
@@ -214,7 +214,7 @@ export default function ReportingPage() {
                     return (
                       <div key={p.processor} className="flex items-center justify-between py-2 border-b last:border-0" style={{ borderColor: "var(--border)" }}>
                         <div className="flex items-center gap-3">
-                          <div className="w-3 h-3 rounded-full" style={{ background: processorColors[p.processor] || "#7c6aef" }} />
+                          <div className="w-3 h-3 rounded-full" style={{ background: processorColors[p.processor] || "#5B8C2A" }} />
                           <span className="text-sm" style={{ color: "var(--text-secondary)" }}>{p.label}</span>
                         </div>
                         <div className="flex items-center gap-3">
@@ -259,7 +259,7 @@ export default function ReportingPage() {
                           className="h-full rounded-full"
                           style={{
                             width: `${(agent.totalEarnings / maxAgentEarnings) * 100}%`,
-                            background: "#7c6aef",
+                            background: "#5B8C2A",
                           }}
                         />
                       </div>

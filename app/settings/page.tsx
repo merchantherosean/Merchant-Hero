@@ -39,7 +39,7 @@ export default function SettingsPage() {
           <button
             onClick={toggle}
             className="relative w-14 h-7 rounded-full transition-colors cursor-pointer"
-            style={{ background: theme === "dark" ? "#7c6aef" : "var(--border)" }}
+            style={{ background: theme === "dark" ? "#5B8C2A" : "var(--border)" }}
           >
             <div
               className="absolute top-0.5 w-6 h-6 rounded-full transition-transform flex items-center justify-center"
@@ -49,7 +49,7 @@ export default function SettingsPage() {
               }}
             >
               {theme === "dark" ? (
-                <Moon size={12} style={{ color: "#7c6aef" }} />
+                <Moon size={12} style={{ color: "#5B8C2A" }} />
               ) : (
                 <Sun size={12} style={{ color: "var(--text-secondary)" }} />
               )}
@@ -64,7 +64,7 @@ export default function SettingsPage() {
             className="p-4 rounded-lg border-2 transition-colors text-left"
             style={{
               background: "#0f0f0f",
-              borderColor: theme === "dark" ? "#7c6aef" : "#2a2a2a",
+              borderColor: theme === "dark" ? "#5B8C2A" : "#2a2a2a",
             }}
           >
             <div className="w-full h-2 rounded bg-[#1a1a1a] mb-2" />
@@ -77,7 +77,7 @@ export default function SettingsPage() {
             className="p-4 rounded-lg border-2 transition-colors text-left"
             style={{
               background: "#ffffff",
-              borderColor: theme === "light" ? "#7c6aef" : "#e0e0e0",
+              borderColor: theme === "light" ? "#5B8C2A" : "#e0e0e0",
             }}
           >
             <div className="w-full h-2 rounded bg-[#f5f5f5] mb-2" />

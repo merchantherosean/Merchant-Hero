@@ -120,7 +120,7 @@ export default function UsersPage() {
           <button
             onClick={() => setShowAddModal(true)}
             className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg text-white"
-            style={{ background: "#7c6aef" }}
+            style={{ background: "#5B8C2A" }}
           >
             <Plus size={16} />
             Add Agent
@@ -179,7 +179,7 @@ export default function UsersPage() {
                 <div className="flex items-center gap-3">
                   <div
                     className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold"
-                    style={{ background: "var(--accent-bg)", color: "#7c6aef" }}
+                    style={{ background: "var(--accent-bg)", color: "#5B8C2A" }}
                   >
                     {agent.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
                   </div>
@@ -294,7 +294,7 @@ export default function UsersPage() {
                 onClick={handleAddAgent}
                 disabled={saving || !newAgent.name.trim()}
                 className="px-4 py-2 text-sm rounded-lg text-white transition-colors disabled:opacity-50"
-                style={{ background: "#7c6aef" }}
+                style={{ background: "#5B8C2A" }}
               >
                 {saving ? "Adding..." : "Add Agent"}
               </button>

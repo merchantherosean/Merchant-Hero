@@ -59,7 +59,7 @@ export default function MerchantDetailPage() {
   if (!merchant) {
     return (
       <div>
-        <Link href="/merchants" className="text-sm hover:underline" style={{ color: "#7c6aef" }}>
+        <Link href="/merchants" className="text-sm hover:underline" style={{ color: "#5B8C2A" }}>
           &larr; Back to Merchants
         </Link>
         <p className="mt-4 text-sm" style={{ color: "var(--text-muted)" }}>
@@ -76,7 +76,7 @@ export default function MerchantDetailPage() {
       <Link
         href="/merchants"
         className="inline-flex items-center gap-1.5 text-sm mb-6 hover:underline"
-        style={{ color: "#7c6aef" }}
+        style={{ color: "#5B8C2A" }}
       >
         <ArrowLeft size={14} />
         Back to Merchants
@@ -89,7 +89,7 @@ export default function MerchantDetailPage() {
             className="w-12 h-12 rounded-xl flex items-center justify-center"
             style={{ background: "var(--accent-bg)" }}
           >
-            <Store size={24} style={{ color: "#7c6aef" }} />
+            <Store size={24} style={{ color: "#5B8C2A" }} />
           </div>
           <div>
             <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
@@ -138,7 +138,7 @@ export default function MerchantDetailPage() {
           <div className="space-y-2">
             {merchant.agents.map((a) => (
               <div key={a.id} className="flex items-center justify-between">
-                <Link href={`/users/${a.id}`} className="text-sm hover:underline" style={{ color: "#7c6aef" }}>
+                <Link href={`/users/${a.id}`} className="text-sm hover:underline" style={{ color: "#5B8C2A" }}>
                   {a.name}
                 </Link>
                 <span className="text-xs font-mono" style={{ color: "var(--text-secondary)" }}>
@@ -171,7 +171,7 @@ export default function MerchantDetailPage() {
                     className="w-full rounded-t-md min-h-[4px] transition-all"
                     style={{
                       height: `${(r.volume / maxVolume) * 100}%`,
-                      background: "#7c6aef",
+                      background: "#5B8C2A",
                     }}
                   />
                   <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>

@@ -101,7 +101,7 @@ export default function CalendarPage() {
                 day ? "cursor-pointer" : ""
               }`}
               style={{
-                background: day && isToday(day) ? "#7c6aef" : "transparent",
+                background: day && isToday(day) ? "#5B8C2A" : "transparent",
                 color: day
                   ? isToday(day)
                     ? "white"

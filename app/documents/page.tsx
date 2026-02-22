@@ -30,7 +30,7 @@ export default function DocumentsPage() {
             className="flex items-center gap-3 p-4 rounded-lg border"
             style={{ background: "var(--bg-primary)", borderColor: "var(--border)" }}
           >
-            <FileText size={20} style={{ color: "#7c6aef" }} />
+            <FileText size={20} style={{ color: "#5B8C2A" }} />
             <div className="text-left">
               <p className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
                 Contracts

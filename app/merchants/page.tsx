@@ -361,19 +361,19 @@ export default function MerchantsPage() {
       {/* Selection Bar */}
       {selectedIds.size > 0 && (
         <div className="flex items-center justify-between p-3 rounded-lg mb-4 border"
-          style={{ background: "var(--accent-bg)", borderColor: "rgba(124, 106, 239, 0.3)" }}>
-          <span className="text-sm font-medium" style={{ color: "#7c6aef" }}>
+          style={{ background: "var(--accent-bg)", borderColor: "rgba(91, 140, 42, 0.3)" }}>
+          <span className="text-sm font-medium" style={{ color: "#5B8C2A" }}>
             {selectedIds.size} selected &middot; Volume: {formatCurrency(selectedVolume)}
           </span>
           <div className="flex items-center gap-2">
             <button onClick={() => setTagModal(true)}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white cursor-pointer"
-              style={{ background: "#7c6aef" }}>
+              style={{ background: "#5B8C2A" }}>
               <TagIcon size={12} /> Tag
             </button>
             <button onClick={() => setBulkAssignModal(true)}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white cursor-pointer"
-              style={{ background: "#7c6aef" }}>
+              style={{ background: "#5B8C2A" }}>
               <UserPlus size={12} /> Assign Agent
             </button>
             <button onClick={() => setBulkStatusModal(true)}
@@ -400,7 +400,7 @@ export default function MerchantsPage() {
           <button onClick={() => setTagFilter("all")}
             className="px-3 py-1.5 rounded-full text-xs font-medium cursor-pointer transition-colors"
             style={{
-              background: tagFilter === "all" ? "#7c6aef" : "var(--bg-secondary)",
+              background: tagFilter === "all" ? "#5B8C2A" : "var(--bg-secondary)",
               color: tagFilter === "all" ? "white" : "var(--text-secondary)",
               border: "1px solid var(--border)",
             }}>
@@ -517,13 +517,13 @@ export default function MerchantsPage() {
                         ))}
                         <button onClick={() => openManageModal(m)}
                           className="text-[10px] cursor-pointer flex items-center gap-0.5 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                          style={{ color: "#7c6aef" }}>
+                          style={{ color: "#5B8C2A" }}>
                           <Plus size={10} /> Add
                         </button>
                       </div>
                     ) : (
                       <button onClick={() => openManageModal(m)}
-                        className="text-xs cursor-pointer flex items-center gap-1" style={{ color: "#7c6aef" }}>
+                        className="text-xs cursor-pointer flex items-center gap-1" style={{ color: "#5B8C2A" }}>
                         <UserPlus size={12} /> Assign
                       </button>
                     )}
@@ -583,7 +583,7 @@ export default function MerchantsPage() {
                     <div>
                       <span className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>{a.name}</span>
                       {a.bpsRate != null && (
-                        <span className="ml-2 text-xs font-mono" style={{ color: "#7c6aef" }}>{a.bpsRate} BPS</span>
+                        <span className="ml-2 text-xs font-mono" style={{ color: "#5B8C2A" }}>{a.bpsRate} BPS</span>
                       )}
                       {a.bpsRate == null && (
                         <span className="ml-2 text-xs" style={{ color: "var(--text-muted)" }}>No BPS set</span>
@@ -621,7 +621,7 @@ export default function MerchantsPage() {
                 <button onClick={handleAddAgent}
                   disabled={!addAgentId || saving}
                   className="px-4 py-2.5 rounded-lg text-sm font-medium text-white cursor-pointer disabled:opacity-50"
-                  style={{ background: "#7c6aef" }}>
+                  style={{ background: "#5B8C2A" }}>
                   <Plus size={14} />
                 </button>
               </div>
@@ -665,7 +665,7 @@ export default function MerchantsPage() {
               </p>
               <button onClick={handleTagSelected}
                 disabled={selectedTagId === "new" && !newTagName.trim()}
-                className="w-full py-2.5 rounded-lg text-sm font-medium text-white cursor-pointer disabled:opacity-50" style={{ background: "#7c6aef" }}>
+                className="w-full py-2.5 rounded-lg text-sm font-medium text-white cursor-pointer disabled:opacity-50" style={{ background: "#5B8C2A" }}>
                 <TagIcon size={14} className="inline mr-1.5" /> Apply Tag
               </button>
             </div>
@@ -712,7 +712,7 @@ export default function MerchantsPage() {
               <button onClick={handleBulkAssignAgent}
                 disabled={!bulkAgentId || bulkSaving}
                 className="w-full py-2.5 rounded-lg text-sm font-medium text-white cursor-pointer disabled:opacity-50"
-                style={{ background: "#7c6aef" }}>
+                style={{ background: "#5B8C2A" }}>
                 <UserPlus size={14} className="inline mr-1.5" />
                 {bulkSaving ? "Assigning..." : "Assign Agent"}
               </button>
@@ -745,7 +745,7 @@ export default function MerchantsPage() {
               <button onClick={handleBulkUpdateStatus}
                 disabled={bulkSaving}
                 className="w-full py-2.5 rounded-lg text-sm font-medium text-white cursor-pointer disabled:opacity-50"
-                style={{ background: "#7c6aef" }}>
+                style={{ background: "#5B8C2A" }}>
                 {bulkSaving ? "Updating..." : "Update Status"}
               </button>
             </div>
@@ -780,7 +780,7 @@ export default function MerchantsPage() {
               <button onClick={handleBulkSetHidden}
                 disabled={bulkSaving}
                 className="w-full py-2.5 rounded-lg text-sm font-medium text-white cursor-pointer disabled:opacity-50"
-                style={{ background: "#7c6aef" }}>
+                style={{ background: "#5B8C2A" }}>
                 {bulkSaving ? "Updating..." : bulkHidden ? "Hide Merchants" : "Show Merchants"}
               </button>
             </div>
