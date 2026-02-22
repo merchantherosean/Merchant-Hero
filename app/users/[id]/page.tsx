@@ -3,11 +3,11 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Users, Store, Trash2 } from "lucide-react";
+import { ArrowLeft, Users, Store, Trash2, FileText } from "lucide-react";
 import StatusBadge from "@/components/StatusBadge";
 import StatsCard from "@/components/StatsCard";
 import { formatCurrency, formatMonthYear, formatNumber } from "@/lib/formatters";
-import { PROCESSOR_LABELS, type Processor } from "@/lib/types";
+import { PROCESSOR_LABELS, MONTHS, type Processor } from "@/lib/types";
 
 interface AgentDetail {
   id: string;
@@ -41,6 +41,10 @@ export default function AgentDetailPage() {
   const [loading, setLoading] = useState(true);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportMonth, setReportMonth] = useState(new Date().getMonth() + 1);
+  const [reportYear, setReportYear] = useState(new Date().getFullYear());
+  const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
     fetch(`/api/agents/${params.id}`)
@@ -82,6 +86,35 @@ export default function AgentDetailPage() {
       setDeleting(false);
     }
   }
+
+  async function handleGenerateReport() {
+    setGenerating(true);
+    try {
+      const res = await fetch(
+        `/api/agents/${params.id}/report?year=${reportYear}&month=${reportMonth}`
+      );
+      if (!res.ok) throw new Error("Failed to fetch report data");
+      const data = await res.json();
+      const { generateAgentReport } = await import("@/lib/generate-agent-report");
+      generateAgentReport(data);
+      setShowReportModal(false);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  // Default report month/year to the most recent month with data
+  useEffect(() => {
+    if (agent && agent.monthlyEarnings.length > 0) {
+      const sorted = [...agent.monthlyEarnings].sort(
+        (a, b) => b.year - a.year || b.month - a.month
+      );
+      setReportMonth(sorted[0].month);
+      setReportYear(sorted[0].year);
+    }
+  }, [agent]);
 
   const totalVolume = agent.monthlyEarnings.reduce((s, e) => s + e.volume, 0);
   const totalEarnings = agent.monthlyEarnings.reduce((s, e) => s + e.earnings, 0);
@@ -126,6 +159,16 @@ export default function AgentDetailPage() {
         </div>
         <div className="flex items-center gap-3">
           <StatusBadge status={agent.status} />
+          <button
+            onClick={() => setShowReportModal(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border transition-colors"
+            style={{ color: "#7c6aef", borderColor: "#7c6aef" }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(124, 106, 239, 0.1)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+          >
+            <FileText size={14} />
+            Generate Report
+          </button>
           <button
             onClick={() => setShowDeleteModal(true)}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border transition-colors hover:bg-red-500/10"
@@ -273,6 +316,90 @@ export default function AgentDetailPage() {
           </tbody>
         </table>
       </div>
+
+      {/* Generate Report Modal */}
+      {showReportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div
+            className="rounded-xl p-6 w-full max-w-md mx-4 shadow-xl"
+            style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)" }}
+          >
+            <div className="flex items-center gap-3 mb-2">
+              <div
+                className="w-9 h-9 rounded-lg flex items-center justify-center"
+                style={{ background: "rgba(124, 106, 239, 0.15)" }}
+              >
+                <FileText size={18} color="#7c6aef" />
+              </div>
+              <h3 className="text-lg font-semibold" style={{ color: "var(--text-primary)" }}>
+                Generate Commission Report
+              </h3>
+            </div>
+            <p className="text-sm mb-6" style={{ color: "var(--text-muted)" }}>
+              Select a month and year to generate a PDF report for <strong style={{ color: "var(--text-primary)" }}>{agent.name}</strong>.
+            </p>
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <div>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--text-muted)" }}>
+                  Month
+                </label>
+                <select
+                  value={reportMonth}
+                  onChange={(e) => setReportMonth(parseInt(e.target.value))}
+                  className="w-full px-3 py-2.5 rounded-lg text-sm outline-none cursor-pointer"
+                  style={{
+                    background: "var(--bg-primary)",
+                    border: "1px solid var(--border)",
+                    color: "var(--text-primary)",
+                  }}
+                >
+                  {MONTHS.map((m, i) => (
+                    <option key={i} value={i + 1}>{m}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--text-muted)" }}>
+                  Year
+                </label>
+                <select
+                  value={reportYear}
+                  onChange={(e) => setReportYear(parseInt(e.target.value))}
+                  className="w-full px-3 py-2.5 rounded-lg text-sm outline-none cursor-pointer"
+                  style={{
+                    background: "var(--bg-primary)",
+                    border: "1px solid var(--border)",
+                    color: "var(--text-primary)",
+                  }}
+                >
+                  {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map((y) => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowReportModal(false)}
+                className="px-4 py-2 text-sm rounded-lg border transition-colors"
+                style={{ borderColor: "var(--border)", color: "var(--text-secondary)" }}
+                disabled={generating}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleGenerateReport}
+                disabled={generating}
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm rounded-lg text-white transition-colors"
+                style={{ background: "#7c6aef" }}
+              >
+                <FileText size={14} />
+                {generating ? "Generating..." : "Generate PDF"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (
