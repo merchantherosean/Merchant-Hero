@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { BarChart3 } from "lucide-react";
+import { BarChart3, FileText } from "lucide-react";
 import { formatCurrency, formatCurrencyCompact, formatNumber } from "@/lib/formatters";
 import { PROCESSOR_LABELS, MONTHS, type Processor } from "@/lib/types";
 
@@ -38,8 +38,23 @@ export default function ReportingPage() {
   const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1);
   const [initialized, setInitialized] = useState(false);
+  const [generatingPnl, setGeneratingPnl] = useState(false);
 
   const years = Array.from({ length: 5 }, (_, i) => currentDate.getFullYear() - i);
+
+  const handleGeneratePnl = async () => {
+    setGeneratingPnl(true);
+    try {
+      const res = await fetch(`/api/reports/pnl?year=${selectedYear}&month=${selectedMonth}`);
+      const pnlData = await res.json();
+      const { generatePnlReport } = await import("@/lib/generate-pnl-report");
+      generatePnlReport(pnlData);
+    } catch (err) {
+      console.error("Failed to generate P&L report:", err);
+    } finally {
+      setGeneratingPnl(false);
+    }
+  };
 
   const fetchData = useCallback((year?: number, month?: number) => {
     setLoading(true);
@@ -137,6 +152,15 @@ export default function ReportingPage() {
               <option key={y} value={y}>{y}</option>
             ))}
           </select>
+          <button
+            onClick={handleGeneratePnl}
+            disabled={generatingPnl}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white cursor-pointer disabled:opacity-50 transition-colors"
+            style={{ background: "#5B8C2A" }}
+          >
+            <FileText size={16} />
+            {generatingPnl ? "Generating..." : "Generate P&L Report"}
+          </button>
         </div>
       </div>
 
