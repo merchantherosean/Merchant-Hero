@@ -139,7 +139,6 @@ export function generateAgentReport(data: ReportData): void {
     autoTable(doc, {
       startY: y,
       margin: { left: margin, right: margin },
-      showFoot: "lastPage",
       head: [["#", "Location (DBA)", "Volume", "BPS Rate", "Net Profit"]],
       body: data.merchants.map((m, i) => [
         (i + 1).toString(),
@@ -148,13 +147,6 @@ export function generateAgentReport(data: ReportData): void {
         m.bpsRate.toFixed(1),
         fmtCurrency(m.netProfit),
       ]),
-      foot: [[
-        "",
-        "GRAND TOTAL",
-        fmtCurrency(data.totals.volume),
-        "",
-        fmtCurrency(data.totals.netProfit),
-      ]],
       // Header styling — lime green
       headStyles: {
         fillColor: LIME_GREEN,
@@ -162,14 +154,6 @@ export function generateAgentReport(data: ReportData): void {
         fontStyle: "bold",
         fontSize: 10,
         cellPadding: { top: 8, bottom: 8, left: 12, right: 12 },
-      },
-      // Footer (grand total) styling — dark background, white text
-      footStyles: {
-        fillColor: DARK_BROWN,
-        textColor: WHITE,
-        fontStyle: "bold",
-        fontSize: 11,
-        cellPadding: { top: 10, bottom: 10, left: 12, right: 12 },
       },
       // Body styling
       bodyStyles: {
@@ -188,27 +172,48 @@ export function generateAgentReport(data: ReportData): void {
         3: { halign: "center", cellWidth: 80 },
         4: { halign: "right", cellWidth: 130 },
       },
-      // Make the grand total net profit lime green for emphasis
-      didParseCell: (hookData) => {
-        if (hookData.section === "foot" && hookData.column.index === 4) {
-          hookData.cell.styles.textColor = [...LIME_GREEN] as unknown as [number, number, number];
-        }
-        // Keep the # column muted in the footer too
-        if (hookData.section === "foot" && hookData.column.index === 0) {
-          hookData.cell.styles.textColor = [...DARK_BROWN] as unknown as [number, number, number];
-        }
-      },
       // Thin line between rows
       tableLineColor: [220, 220, 220],
       tableLineWidth: 0.5,
     });
+
+    // ──────────────────────────────────────────────
+    // GRAND TOTAL — drawn manually so it only appears once
+    // ──────────────────────────────────────────────
+    const gtY = doc.lastAutoTable.finalY;
+    const gtHeight = 34;
+    const tableRight = margin + contentWidth;
+
+    // Column right edges (from right): col4=130, col3=80, col2=130
+    const col4Right = tableRight;
+    const col3Right = tableRight - 130;
+    const col2Right = col3Right - 80;
+
+    // Dark brown background bar
+    doc.setFillColor(...DARK_BROWN);
+    doc.rect(margin, gtY, contentWidth, gtHeight, "F");
+
+    const textY = gtY + gtHeight / 2 + 4;
+
+    // "GRAND TOTAL" label — left side, after the # column
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...WHITE);
+    doc.text("GRAND TOTAL", margin + 45 + 12, textY);
+
+    // Volume — right-aligned to match column 2
+    doc.text(fmtCurrency(data.totals.volume), col2Right - 12, textY, { align: "right" });
+
+    // Net Profit — right-aligned to match column 4, in lime green
+    doc.setTextColor(...LIME_GREEN);
+    doc.text(fmtCurrency(data.totals.netProfit), col4Right - 12, textY, { align: "right" });
   }
 
   // ──────────────────────────────────────────────
   // FOOTER
   // ──────────────────────────────────────────────
   const finalY = data.merchants.length > 0
-    ? doc.lastAutoTable.finalY + 36
+    ? doc.lastAutoTable.finalY + 32 + 36
     : y + 56;
 
   // Divider line — lime green
