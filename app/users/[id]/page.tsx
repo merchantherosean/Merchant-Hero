@@ -297,7 +297,7 @@ export default function AgentDetailPage() {
           label="Total BPS Earnings"
           value={formatCurrency(totalEarnings)}
           icon={<Users size={20} />}
-          color="#34d399"
+          color="#5B8C2A"
         />
       </div>
 
@@ -406,7 +406,7 @@ export default function AgentDetailPage() {
                     <td className="px-4 py-3 text-sm" style={{ color: "var(--text-primary)" }}>
                       {formatCurrency(e.volume)}
                     </td>
-                    <td className="px-4 py-3 text-sm font-medium" style={{ color: "#34d399" }}>
+                    <td className="px-4 py-3 text-sm font-medium" style={{ color: "#5B8C2A" }}>
                       {formatCurrency(e.earnings)}
                     </td>
                   </tr>

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { useTheme } from "@/components/ThemeProvider";
 import {
   LayoutDashboard,
   Store,
@@ -31,6 +32,7 @@ const nav = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { theme } = useTheme();
 
   return (
     <aside className="w-60 shrink-0 border-r flex flex-col" style={{ borderColor: "var(--border)", background: "var(--bg-sidebar)" }}>
@@ -38,7 +40,7 @@ export default function Sidebar() {
       <div className="px-4 py-4 border-b" style={{ borderColor: "var(--border)" }}>
         <Link href="/" className="block">
           <Image
-            src="/logo.png"
+            src={theme === "dark" ? "/logo-dark.png" : "/logo-light.png"}
             alt="Merchant Hero"
             width={180}
             height={90}

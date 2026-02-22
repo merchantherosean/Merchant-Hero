@@ -531,7 +531,7 @@ export default function MerchantsPage() {
                   <td className="px-3 py-3 text-sm" style={{ color: "var(--text-primary)" }}>
                     {m.latestVolume != null ? formatCurrency(m.latestVolume) : "—"}
                   </td>
-                  <td className="px-3 py-3 text-sm font-medium" style={{ color: "#34d399" }}>
+                  <td className="px-3 py-3 text-sm font-medium" style={{ color: "#5B8C2A" }}>
                     {m.latestNet != null ? formatCurrency(m.latestNet) : "—"}
                   </td>
                   <td className="px-3 py-3">

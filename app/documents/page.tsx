@@ -44,7 +44,7 @@ export default function DocumentsPage() {
             className="flex items-center gap-3 p-4 rounded-lg border"
             style={{ background: "var(--bg-primary)", borderColor: "var(--border)" }}
           >
-            <Upload size={20} style={{ color: "#34d399" }} />
+            <Upload size={20} style={{ color: "#5B8C2A" }} />
             <div className="text-left">
               <p className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
                 Templates

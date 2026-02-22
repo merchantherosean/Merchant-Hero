@@ -221,19 +221,19 @@ export default function ResidualsPage() {
           <div
             className="mt-4 p-4 rounded-lg border"
             style={{
-              background: uploadResult.success ? "rgba(52, 211, 153, 0.1)" : "rgba(239, 68, 68, 0.1)",
-              borderColor: uploadResult.success ? "rgba(52, 211, 153, 0.3)" : "rgba(239, 68, 68, 0.3)",
+              background: uploadResult.success ? "rgba(91, 140, 42, 0.1)" : "rgba(239, 68, 68, 0.1)",
+              borderColor: uploadResult.success ? "rgba(91, 140, 42, 0.3)" : "rgba(239, 68, 68, 0.3)",
             }}
           >
             <div className="flex items-center gap-2 mb-2">
               {uploadResult.success ? (
-                <CheckCircle size={16} style={{ color: "#34d399" }} />
+                <CheckCircle size={16} style={{ color: "#5B8C2A" }} />
               ) : (
                 <AlertCircle size={16} style={{ color: "#ef4444" }} />
               )}
               <span
                 className="text-sm font-medium"
-                style={{ color: uploadResult.success ? "#34d399" : "#ef4444" }}
+                style={{ color: uploadResult.success ? "#5B8C2A" : "#ef4444" }}
               >
                 {uploadResult.success ? "Upload Successful" : "Upload Failed"}
               </span>
@@ -254,7 +254,7 @@ export default function ResidualsPage() {
                 </div>
                 <div>
                   <p className="text-xs" style={{ color: "var(--text-muted)" }}>Total Net</p>
-                  <p className="text-sm font-medium" style={{ color: "#34d399" }}>
+                  <p className="text-sm font-medium" style={{ color: "#5B8C2A" }}>
                     {formatCurrency(uploadResult.totalNet)}
                   </p>
                 </div>
@@ -425,7 +425,7 @@ export default function ResidualsPage() {
                   <td className="px-4 py-3 text-sm" style={{ color: "var(--text-primary)" }}>
                     {formatCurrency(r.income)}
                   </td>
-                  <td className="px-4 py-3 text-sm font-medium" style={{ color: "#34d399" }}>
+                  <td className="px-4 py-3 text-sm font-medium" style={{ color: "#5B8C2A" }}>
                     {formatCurrency(r.netCommission)}
                   </td>
                   <td className="px-4 py-3 text-sm" style={{ color: "var(--text-secondary)" }}>
@@ -448,7 +448,7 @@ export default function ResidualsPage() {
               <span className="text-xs" style={{ color: "var(--text-muted)" }}>
                 Volume: {formatCurrency(residuals.reduce((s, r) => s + r.volume, 0))}
               </span>
-              <span className="text-xs font-medium" style={{ color: "#34d399" }}>
+              <span className="text-xs font-medium" style={{ color: "#5B8C2A" }}>
                 Net: {formatCurrency(residuals.reduce((s, r) => s + r.netCommission, 0))}
               </span>
             </div>

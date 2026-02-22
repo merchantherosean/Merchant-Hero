@@ -107,7 +107,7 @@ export default function ReportingPage() {
 
   const processorColors: Record<string, string> = {
     signapay: "#6366f1",
-    fiserv: "#34d399",
+    fiserv: "#5B8C2A",
     tsys: "#60a5fa",
     maverick: "#fbbf24",
   };
@@ -250,7 +250,7 @@ export default function ReportingPage() {
                         <span className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
                           {agent.name}
                         </span>
-                        <span className="text-sm font-medium" style={{ color: "#34d399" }}>
+                        <span className="text-sm font-medium" style={{ color: "#5B8C2A" }}>
                           {formatCurrency(agent.totalEarnings)}
                         </span>
                       </div>
@@ -301,7 +301,7 @@ export default function ReportingPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-sm" style={{ color: "var(--text-primary)" }}>{formatCurrency(m.volume)}</td>
-                      <td className="px-4 py-3 text-sm font-medium" style={{ color: "#34d399" }}>{formatCurrency(m.net)}</td>
+                      <td className="px-4 py-3 text-sm font-medium" style={{ color: "#5B8C2A" }}>{formatCurrency(m.net)}</td>
                     </tr>
                   ))
                 ) : (

@@ -108,7 +108,7 @@ export default function Dashboard() {
           label="Active Merchants"
           value={loading ? "..." : formatNumber(stats?.activeMerchantCount ?? 0)}
           icon={<Activity size={20} />}
-          color="#34d399"
+          color="#5B8C2A"
         />
         <StatsCard
           label="Total Agents"
@@ -149,7 +149,7 @@ export default function Dashboard() {
                           p.processor === "signapay"
                             ? "#5B8C2A"
                             : p.processor === "fiserv"
-                            ? "#34d399"
+                            ? "#5B8C2A"
                             : p.processor === "tsys"
                             ? "#60a5fa"
                             : "#fbbf24",

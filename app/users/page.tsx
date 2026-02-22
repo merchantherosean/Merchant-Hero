@@ -217,7 +217,7 @@ export default function UsersPage() {
                   <p className="text-[10px] uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
                     Earnings
                   </p>
-                  <p className="text-sm font-medium" style={{ color: "#34d399" }}>
+                  <p className="text-sm font-medium" style={{ color: "#5B8C2A" }}>
                     {formatCurrency(agent.totalEarnings)}
                   </p>
                 </div>

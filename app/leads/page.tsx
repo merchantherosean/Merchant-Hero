@@ -81,7 +81,7 @@ export default function LeadsPage() {
     switch (p) {
       case "HIGH": return "#ef4444";
       case "MEDIUM": return "#fbbf24";
-      case "LOW": return "#34d399";
+      case "LOW": return "#5B8C2A";
       default: return "var(--text-muted)";
     }
   };

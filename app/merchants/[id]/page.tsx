@@ -232,7 +232,7 @@ export default function MerchantDetailPage() {
                     <td className="px-4 py-3 text-sm" style={{ color: "var(--text-primary)" }}>
                       {formatCurrency(r.income)}
                     </td>
-                    <td className="px-4 py-3 text-sm font-medium" style={{ color: "#34d399" }}>
+                    <td className="px-4 py-3 text-sm font-medium" style={{ color: "#5B8C2A" }}>
                       {formatCurrency(r.netCommission)}
                     </td>
                     <td className="px-4 py-3 text-sm" style={{ color: "var(--text-secondary)" }}>
