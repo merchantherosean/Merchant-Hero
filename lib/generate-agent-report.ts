@@ -47,7 +47,7 @@ function fmtCurrency(value: number): string {
 }
 
 export function generateAgentReport(data: ReportData): void {
-  const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "letter" });
+  const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "letter" });
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 40;
   const contentWidth = pageWidth - margin * 2;
@@ -159,33 +159,33 @@ export function generateAgentReport(data: ReportData): void {
         fillColor: LIME_GREEN,
         textColor: WHITE,
         fontStyle: "bold",
-        fontSize: 9,
-        cellPadding: { top: 8, bottom: 8, left: 10, right: 10 },
+        fontSize: 10,
+        cellPadding: { top: 8, bottom: 8, left: 12, right: 12 },
       },
       // Footer (grand total) styling — dark background, white text
       footStyles: {
         fillColor: DARK_BROWN,
         textColor: WHITE,
         fontStyle: "bold",
-        fontSize: 10,
-        cellPadding: { top: 10, bottom: 10, left: 10, right: 10 },
+        fontSize: 11,
+        cellPadding: { top: 10, bottom: 10, left: 12, right: 12 },
       },
       // Body styling
       bodyStyles: {
-        fontSize: 9,
+        fontSize: 10,
         textColor: [60, 60, 60],
-        cellPadding: { top: 7, bottom: 7, left: 10, right: 10 },
+        cellPadding: { top: 7, bottom: 7, left: 12, right: 12 },
       },
       alternateRowStyles: {
         fillColor: LIME_GREEN_LIGHT,
       },
-      // Column configuration — same widths for head, body, and foot
+      // Column configuration — wider columns for landscape
       columnStyles: {
-        0: { halign: "center", cellWidth: 30, textColor: MUTED_TEXT },
+        0: { halign: "center", cellWidth: 35, textColor: MUTED_TEXT },
         1: { cellWidth: "auto" },
-        2: { halign: "right", cellWidth: 100 },
-        3: { halign: "center", cellWidth: 65 },
-        4: { halign: "right", cellWidth: 100 },
+        2: { halign: "right", cellWidth: 130 },
+        3: { halign: "center", cellWidth: 80 },
+        4: { halign: "right", cellWidth: 130 },
       },
       // Make the grand total net profit lime green for emphasis
       didParseCell: (hookData) => {
