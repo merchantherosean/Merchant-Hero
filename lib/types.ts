@@ -112,3 +112,27 @@ export interface DocumentRecord {
   mimeType: string;
   uploadedAt: string;
 }
+
+// Email
+export const EMAIL_STATUSES = ["sent", "failed"] as const;
+export type EmailStatus = (typeof EMAIL_STATUSES)[number];
+
+export interface SentEmailRecord {
+  id: string;
+  to: string;
+  cc: string | null;
+  subject: string;
+  body: string;
+  status: string;
+  errorMessage: string | null;
+  sentAt: string;
+}
+
+export interface EmailTemplateRecord {
+  id: string;
+  name: string;
+  subject: string;
+  body: string;
+  createdAt: string;
+  updatedAt: string;
+}

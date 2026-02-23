@@ -13,6 +13,7 @@ import {
   FileText,
   DollarSign,
   Calendar,
+  Mail,
   FolderOpen,
   Users,
   Settings,
@@ -38,6 +39,7 @@ const nav: NavItem[] = [
   { href: "/applications", label: "Applications", icon: FileText },
   { href: "/residuals", label: "Residuals", icon: DollarSign },
   { href: "/calendar", label: "Calendar", icon: Calendar },
+  { href: "/email", label: "Email", icon: Mail },
   {
     href: "/documents",
     label: "Documents",
