@@ -16,24 +16,20 @@ export async function POST(req: Request) {
     let emailAttachments: { filename: string; content: Buffer }[] = [];
 
     if (contentType.includes("multipart/form-data")) {
-      // FormData upload — attachments sent as base64 text fields
+      // FormData upload with actual File objects
       const formData = await req.formData();
       to = (formData.get("to") as string) || "";
       cc = (formData.get("cc") as string) || undefined;
       subject = (formData.get("subject") as string) || "";
       emailBody = (formData.get("body") as string) || "";
 
-      const fileCount = parseInt((formData.get("file_count") as string) || "0", 10);
-      for (let i = 0; i < fileCount; i++) {
-        const name = (formData.get(`file_name_${i}`) as string) || `attachment_${i}`;
-        const base64 = (formData.get(`file_data_${i}`) as string) || "";
-        if (base64) {
-          emailAttachments.push({
-            filename: name,
-            content: Buffer.from(base64, "base64"),
-          });
-        }
-      }
+      const files = formData.getAll("files") as File[];
+      emailAttachments = await Promise.all(
+        files.map(async (file) => ({
+          filename: file.name,
+          content: Buffer.from(await file.arrayBuffer()),
+        }))
+      );
     } else {
       // JSON body (plain emails without attachments)
       const rawText = await req.text();

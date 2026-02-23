@@ -616,8 +616,8 @@ function ComposeTab({
   const [subject, setSubject] = useState(initialSubject || "");
   const [body, setBody] = useState("");
   const [attachments, setAttachments] = useState<
-    { base64: string; fileName: string }[]
-  >(initialAttachment ? [initialAttachment] : []);
+    { file: File; fileName: string }[]
+  >([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const [sending, setSending] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -631,8 +631,26 @@ function ComposeTab({
     if (initialSubject !== undefined) setSubject(initialSubject);
   }, [initialSubject]);
 
+  // Convert base64 attachment (from Email Report flow) to File object
   useEffect(() => {
-    setAttachments(initialAttachment ? [initialAttachment] : []);
+    if (initialAttachment?.base64 && initialAttachment?.fileName) {
+      try {
+        const byteChars = atob(initialAttachment.base64);
+        const bytes = new Uint8Array(byteChars.length);
+        for (let i = 0; i < byteChars.length; i++) {
+          bytes[i] = byteChars.charCodeAt(i);
+        }
+        const blob = new Blob([bytes], { type: "application/pdf" });
+        const file = new File([blob], initialAttachment.fileName, {
+          type: "application/pdf",
+        });
+        setAttachments([{ file, fileName: initialAttachment.fileName }]);
+      } catch {
+        setAttachments([]);
+      }
+    } else {
+      setAttachments([]);
+    }
   }, [initialAttachment]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -645,13 +663,7 @@ function ComposeTab({
         onError(`File "${file.name}" is too large (max 10MB)`);
         return;
       }
-      const reader = new FileReader();
-      reader.onload = () => {
-        const result = reader.result as string;
-        const base64 = result.split(",")[1];
-        setAttachments((prev) => [...prev, { base64, fileName: file.name }]);
-      };
-      reader.readAsDataURL(file);
+      setAttachments((prev) => [...prev, { file, fileName: file.name }]);
     });
 
     // Reset input so the same file can be selected again
@@ -699,24 +711,15 @@ function ComposeTab({
       let res: Response;
 
       if (attachments.length > 0) {
-        // Use FormData for file uploads (avoids JSON body size limits)
+        // Use FormData with actual File objects (binary multipart upload)
         const formData = new FormData();
         formData.append("to", to.trim());
         if (cc.trim()) formData.append("cc", cc.trim());
         formData.append("subject", subject.trim());
         formData.append("body", body.trim());
-
         for (const att of attachments) {
-          // Convert base64 back to binary File
-          const byteString = atob(att.base64);
-          const byteArray = new Uint8Array(byteString.length);
-          for (let i = 0; i < byteString.length; i++) {
-            byteArray[i] = byteString.charCodeAt(i);
-          }
-          const file = new File([byteArray], att.fileName);
-          formData.append("files", file);
+          formData.append("files", att.file, att.fileName);
         }
-
         res = await fetch("/api/email/send", {
           method: "POST",
           body: formData,
