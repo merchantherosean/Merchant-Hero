@@ -58,7 +58,6 @@ export default function AgentDetailPage() {
   const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
   const [editPhone, setEditPhone] = useState("");
-  const [editSplit, setEditSplit] = useState("");
   const [editStatus, setEditStatus] = useState("");
 
   useEffect(() => {
@@ -170,7 +169,6 @@ export default function AgentDetailPage() {
     setEditName(agent.name);
     setEditEmail(agent.email || "");
     setEditPhone(agent.phone || "");
-    setEditSplit(agent.splitPercent != null ? String(agent.splitPercent) : "");
     setEditStatus(agent.status);
     setEditing(true);
   }
@@ -185,7 +183,6 @@ export default function AgentDetailPage() {
           name: editName.trim(),
           email: editEmail.trim() || null,
           phone: editPhone.trim() || null,
-          splitPercent: editSplit ? parseFloat(editSplit) : null,
           status: editStatus,
         }),
       });
@@ -373,23 +370,6 @@ export default function AgentDetailPage() {
                 value={editPhone}
                 onChange={(e) => setEditPhone(e.target.value)}
                 placeholder="(555) 123-4567"
-                className="w-full px-3 py-2 rounded-lg text-sm outline-none"
-                style={{ background: "var(--bg-primary)", border: "1px solid var(--border)", color: "var(--text-primary)" }}
-              />
-            </div>
-            {/* Split Percent */}
-            <div>
-              <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--text-muted)" }}>
-                Split %
-              </label>
-              <input
-                type="number"
-                value={editSplit}
-                onChange={(e) => setEditSplit(e.target.value)}
-                placeholder="e.g. 50"
-                min="0"
-                max="100"
-                step="0.1"
                 className="w-full px-3 py-2 rounded-lg text-sm outline-none"
                 style={{ background: "var(--bg-primary)", border: "1px solid var(--border)", color: "var(--text-primary)" }}
               />
