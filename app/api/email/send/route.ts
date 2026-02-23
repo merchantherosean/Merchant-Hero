@@ -9,7 +9,17 @@ export async function POST(req: Request) {
   try {
     // Read as text first to avoid default JSON body size limits
     const rawText = await req.text();
-    const body = JSON.parse(rawText);
+
+    let body;
+    try {
+      body = JSON.parse(rawText);
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid request body" },
+        { status: 400 }
+      );
+    }
+
     const { to, cc, subject, body: emailBody, attachments } = body;
 
     if (!to || !subject) {
@@ -17,6 +27,19 @@ export async function POST(req: Request) {
         { error: "To and Subject fields are required" },
         { status: 400 }
       );
+    }
+
+    // Basic email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const toAddresses = to.split(",").map((e: string) => e.trim()).filter(Boolean);
+
+    for (const addr of toAddresses) {
+      if (!emailRegex.test(addr)) {
+        return NextResponse.json(
+          { error: `Invalid email address: "${addr}"` },
+          { status: 400 }
+        );
+      }
     }
 
     // Send via Gmail SMTP

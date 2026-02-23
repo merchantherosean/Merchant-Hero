@@ -678,6 +678,17 @@ function ComposeTab({
       onError("Please enter a recipient email address");
       return;
     }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const toAddresses = to.split(",").map((e) => e.trim()).filter(Boolean);
+    for (const addr of toAddresses) {
+      if (!emailRegex.test(addr)) {
+        onError(`Invalid email address: "${addr}"`);
+        return;
+      }
+    }
+
     if (!subject.trim()) {
       onError("Please enter a subject");
       return;
