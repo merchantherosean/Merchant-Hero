@@ -7,47 +7,21 @@ export const maxDuration = 30;
 
 export async function POST(req: Request) {
   try {
-    const contentType = req.headers.get("content-type") || "";
-
-    let to: string;
-    let cc: string | undefined;
-    let subject: string;
-    let emailBody: string;
-    let emailAttachments: { filename: string; content: Buffer }[] = [];
-
-    if (contentType.includes("multipart/form-data")) {
-      // FormData upload with actual File objects
-      const formData = await req.formData();
-      to = (formData.get("to") as string) || "";
-      cc = (formData.get("cc") as string) || undefined;
-      subject = (formData.get("subject") as string) || "";
-      emailBody = (formData.get("body") as string) || "";
-
-      const files = formData.getAll("files") as File[];
-      emailAttachments = await Promise.all(
-        files.map(async (file) => ({
-          filename: file.name,
-          content: Buffer.from(await file.arrayBuffer()),
-        }))
+    const rawText = await req.text();
+    let body;
+    try {
+      body = JSON.parse(rawText);
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid request body" },
+        { status: 400 }
       );
-    } else {
-      // JSON body (plain emails without attachments)
-      const rawText = await req.text();
-      let body;
-      try {
-        body = JSON.parse(rawText);
-      } catch {
-        return NextResponse.json(
-          { error: "Invalid request body" },
-          { status: 400 }
-        );
-      }
-
-      to = body.to || "";
-      cc = body.cc || undefined;
-      subject = body.subject || "";
-      emailBody = body.body || "";
     }
+
+    const to: string = body.to || "";
+    const cc: string | undefined = body.cc || undefined;
+    const subject: string = body.subject || "";
+    const emailBody: string = body.body || "";
 
     if (!to || !subject) {
       return NextResponse.json(
@@ -66,6 +40,19 @@ export async function POST(req: Request) {
           { error: `Invalid email address: "${addr}"` },
           { status: 400 }
         );
+      }
+    }
+
+    // Build attachments from base64 data
+    const emailAttachments: { filename: string; content: Buffer }[] = [];
+    if (Array.isArray(body.attachments)) {
+      for (const att of body.attachments) {
+        if (att.content && att.filename) {
+          emailAttachments.push({
+            filename: att.filename,
+            content: Buffer.from(att.content, "base64"),
+          });
+        }
       }
     }
 

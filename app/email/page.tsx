@@ -616,7 +616,7 @@ function ComposeTab({
   const [subject, setSubject] = useState(initialSubject || "");
   const [body, setBody] = useState("");
   const [attachments, setAttachments] = useState<
-    { file: File; fileName: string }[]
+    { base64: string; fileName: string }[]
   >([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const [sending, setSending] = useState(false);
@@ -631,23 +631,9 @@ function ComposeTab({
     if (initialSubject !== undefined) setSubject(initialSubject);
   }, [initialSubject]);
 
-  // Convert base64 attachment (from Email Report flow) to File object
   useEffect(() => {
     if (initialAttachment?.base64 && initialAttachment?.fileName) {
-      try {
-        const byteChars = atob(initialAttachment.base64);
-        const bytes = new Uint8Array(byteChars.length);
-        for (let i = 0; i < byteChars.length; i++) {
-          bytes[i] = byteChars.charCodeAt(i);
-        }
-        const blob = new Blob([bytes], { type: "application/pdf" });
-        const file = new File([blob], initialAttachment.fileName, {
-          type: "application/pdf",
-        });
-        setAttachments([{ file, fileName: initialAttachment.fileName }]);
-      } catch {
-        setAttachments([]);
-      }
+      setAttachments([initialAttachment]);
     } else {
       setAttachments([]);
     }
@@ -658,15 +644,20 @@ function ComposeTab({
     if (!files) return;
 
     Array.from(files).forEach((file) => {
-      // 10MB limit per file
-      if (file.size > 10 * 1024 * 1024) {
-        onError(`File "${file.name}" is too large (max 10MB)`);
+      if (file.size > 3 * 1024 * 1024) {
+        onError(`File "${file.name}" is too large (max 3MB)`);
         return;
       }
-      setAttachments((prev) => [...prev, { file, fileName: file.name }]);
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = reader.result as string;
+        const base64 = dataUrl.split(",")[1] || "";
+        setAttachments((prev) => [...prev, { base64, fileName: file.name }]);
+      };
+      reader.onerror = () => onError(`Failed to read file "${file.name}"`);
+      reader.readAsDataURL(file);
     });
 
-    // Reset input so the same file can be selected again
     e.target.value = "";
   };
 
@@ -708,35 +699,24 @@ function ComposeTab({
 
     setSending(true);
     try {
-      let res: Response;
-
+      const payload: Record<string, unknown> = {
+        to: to.trim(),
+        subject: subject.trim(),
+        body: body.trim(),
+      };
+      if (cc.trim()) payload.cc = cc.trim();
       if (attachments.length > 0) {
-        // Use FormData with actual File objects (binary multipart upload)
-        const formData = new FormData();
-        formData.append("to", to.trim());
-        if (cc.trim()) formData.append("cc", cc.trim());
-        formData.append("subject", subject.trim());
-        formData.append("body", body.trim());
-        for (const att of attachments) {
-          formData.append("files", att.file, att.fileName);
-        }
-        res = await fetch("/api/email/send", {
-          method: "POST",
-          body: formData,
-        });
-      } else {
-        // Plain JSON for emails without attachments
-        res = await fetch("/api/email/send", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            to: to.trim(),
-            cc: cc.trim() || undefined,
-            subject: subject.trim(),
-            body: body.trim(),
-          }),
-        });
+        payload.attachments = attachments.map((a) => ({
+          filename: a.fileName,
+          content: a.base64,
+        }));
       }
+
+      const res = await fetch("/api/email/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
 
       const responseText = await res.text();
       let data;
@@ -748,11 +728,10 @@ function ComposeTab({
       }
 
       if (!res.ok) {
-        onError(data.error || `Failed to send email (${res.status})`);
+        onError(data.error || `Failed to send (${res.status})`);
         return;
       }
 
-      // Clear form on success
       setTo("");
       setCc("");
       setSubject("");
@@ -762,7 +741,7 @@ function ComposeTab({
       onSuccess();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";
-      onError(`Failed to send: ${message}`);
+      onError(`Network error: ${message}`);
     } finally {
       setSending(false);
     }
