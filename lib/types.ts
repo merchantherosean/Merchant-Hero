@@ -91,3 +91,24 @@ export interface UploadResponse {
   newAgents: number;
   errors: string[];
 }
+
+// Document management
+export const DOCUMENT_CATEGORIES = ["contracts", "marketing", "training", "legal"] as const;
+export type DocumentCategory = (typeof DOCUMENT_CATEGORIES)[number];
+
+export const DOCUMENT_CATEGORY_LABELS: Record<DocumentCategory, string> = {
+  contracts: "Contracts",
+  marketing: "Marketing",
+  training: "Training",
+  legal: "Legal",
+};
+
+export interface DocumentRecord {
+  id: string;
+  name: string;
+  category: string;
+  fileUrl: string;
+  fileSize: number;
+  mimeType: string;
+  uploadedAt: string;
+}
