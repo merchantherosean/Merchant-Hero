@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
+import { upload } from "@vercel/blob/client";
 import {
   Upload,
   FileText,
@@ -63,18 +64,33 @@ export default function DocumentPage({
     setUploadProgress(`Uploading ${file.name}...`);
 
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("category", category);
+      // Client-side upload: streams directly from browser to Vercel Blob
+      // No serverless body size limit — handles MP4s, large files up to 500MB
+      const blob = await upload(
+        `documents/${category}/${file.name}`,
+        file,
+        {
+          access: "public",
+          handleUploadUrl: "/api/documents/upload-token",
+        }
+      );
 
+      // Save metadata to DB
       const res = await fetch("/api/documents", {
         method: "POST",
-        body: formData,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: file.name,
+          category,
+          fileUrl: blob.url,
+          fileSize: file.size,
+          mimeType: file.type || "application/octet-stream",
+        }),
       });
 
       if (!res.ok) {
         const data = await res.json();
-        setError(data.error || "Upload failed");
+        setError(data.error || "Failed to save document");
         return;
       }
 
