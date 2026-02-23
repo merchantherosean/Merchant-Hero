@@ -157,6 +157,8 @@ function InboxTab() {
   const [total, setTotal] = useState(0);
   const [expandedUid, setExpandedUid] = useState<number | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [deleteConfirmUid, setDeleteConfirmUid] = useState<number | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const limit = 25;
 
   const fetchInbox = useCallback(
@@ -212,6 +214,28 @@ function InboxTab() {
   const extractEmail = (from: string) => {
     const match = from.match(/<(.+?)>/);
     return match ? match[1] : from;
+  };
+
+  const handleDelete = async (uid: number) => {
+    setDeleting(true);
+    try {
+      const res = await fetch("/api/email/inbox", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ uids: [uid] }),
+      });
+      if (res.ok) {
+        // Remove from local state immediately
+        setEmails((prev) => prev.filter((e) => e.uid !== uid));
+        setTotal((prev) => prev - 1);
+        setDeleteConfirmUid(null);
+        setExpandedUid(null);
+      }
+    } catch (err) {
+      console.error("Delete failed:", err);
+    } finally {
+      setDeleting(false);
+    }
   };
 
   return (
@@ -375,6 +399,57 @@ function InboxTab() {
                         >
                           {email.body || "(no content)"}
                         </pre>
+                      </div>
+
+                      {/* Delete Button */}
+                      <div className="mt-3 flex justify-end">
+                        {deleteConfirmUid === email.uid ? (
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="text-xs"
+                              style={{ color: "var(--text-muted)" }}
+                            >
+                              Delete this email?
+                            </span>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDeleteConfirmUid(null);
+                              }}
+                              className="px-2.5 py-1 rounded text-xs cursor-pointer"
+                              style={{
+                                background: "var(--bg-secondary)",
+                                border: "1px solid var(--border)",
+                                color: "var(--text-secondary)",
+                              }}
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDelete(email.uid);
+                              }}
+                              disabled={deleting}
+                              className="px-2.5 py-1 rounded text-xs font-medium text-white cursor-pointer disabled:opacity-50"
+                              style={{ background: "#ef4444" }}
+                            >
+                              {deleting ? "Deleting..." : "Delete"}
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeleteConfirmUid(email.uid);
+                            }}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs cursor-pointer transition-colors hover:opacity-80"
+                            style={{ color: "#ef4444" }}
+                          >
+                            <Trash2 size={12} />
+                            Delete
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>

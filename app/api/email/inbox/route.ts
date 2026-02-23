@@ -110,6 +110,56 @@ export async function GET(req: Request) {
   }
 }
 
+export async function DELETE(req: Request) {
+  const { uids } = await req.json();
+
+  if (!Array.isArray(uids) || uids.length === 0) {
+    return NextResponse.json(
+      { error: "uids array is required" },
+      { status: 400 }
+    );
+  }
+
+  if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
+    return NextResponse.json(
+      { error: "Gmail credentials not configured" },
+      { status: 500 }
+    );
+  }
+
+  const client = new ImapFlow({
+    host: "imap.gmail.com",
+    port: 993,
+    secure: true,
+    auth: {
+      user: process.env.GMAIL_USER,
+      pass: process.env.GMAIL_APP_PASSWORD,
+    },
+    logger: false,
+  });
+
+  try {
+    await client.connect();
+    const lock = await client.getMailboxLock("INBOX");
+
+    try {
+      // Mark messages as deleted and expunge
+      await client.messageDelete(uids as number[], { uid: true });
+      return NextResponse.json({ success: true, deleted: uids.length });
+    } finally {
+      lock.release();
+    }
+  } catch (error) {
+    console.error("IMAP delete error:", error);
+    return NextResponse.json(
+      { error: (error as Error).message },
+      { status: 500 }
+    );
+  } finally {
+    await client.logout().catch(() => {});
+  }
+}
+
 /**
  * Extract plain text body from raw email source.
  * Handles multipart MIME and quoted-printable/base64 encoding.
