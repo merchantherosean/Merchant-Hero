@@ -738,10 +738,17 @@ function ComposeTab({
         });
       }
 
-      const data = await res.json();
+      const responseText = await res.text();
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch {
+        onError(`Server error (${res.status}): ${responseText.slice(0, 200)}`);
+        return;
+      }
 
       if (!res.ok) {
-        onError(data.error || "Failed to send email");
+        onError(data.error || `Failed to send email (${res.status})`);
         return;
       }
 
@@ -754,8 +761,8 @@ function ComposeTab({
       setSelectedTemplateId("");
       onSuccess();
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Network error";
-      onError(`Failed to send: ${message}. Try a smaller attachment.`);
+      const message = err instanceof Error ? err.message : "Unknown error";
+      onError(`Failed to send: ${message}`);
     } finally {
       setSending(false);
     }
