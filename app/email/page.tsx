@@ -644,8 +644,8 @@ function ComposeTab({
     if (!files) return;
 
     Array.from(files).forEach((file) => {
-      if (file.size > 3 * 1024 * 1024) {
-        onError(`File "${file.name}" is too large (max 3MB)`);
+      if (file.size > 2 * 1024 * 1024) {
+        onError(`File "${file.name}" is too large (max 2MB)`);
         return;
       }
       const reader = new FileReader();
