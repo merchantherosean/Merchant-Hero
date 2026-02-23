@@ -11,6 +11,7 @@ import {
   FileImage,
   FileVideo,
   FileSpreadsheet,
+  Eye,
 } from "lucide-react";
 import type { DocumentRecord, DocumentCategory } from "@/lib/types";
 
@@ -39,6 +40,8 @@ export default function DocumentPage({
   const [deleteDoc, setDeleteDoc] = useState<DocumentRecord | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [previewDoc, setPreviewDoc] = useState<DocumentRecord | null>(null);
+  const [hoverPreview, setHoverPreview] = useState<{ doc: DocumentRecord; x: number; y: number } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const fetchDocuments = useCallback(() => {
@@ -114,6 +117,17 @@ export default function DocumentPage({
     if (mimeType.includes("spreadsheet") || mimeType.includes("csv"))
       return FileSpreadsheet;
     return FileText;
+  };
+
+  const isPreviewable = (mimeType: string) =>
+    mimeType.startsWith("image/") ||
+    mimeType.startsWith("video/") ||
+    mimeType === "application/pdf";
+
+  const handleIconHover = (doc: DocumentRecord, e: React.MouseEvent) => {
+    if (!isPreviewable(doc.mimeType)) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    setHoverPreview({ doc, x: rect.right + 8, y: rect.top });
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -288,14 +302,29 @@ export default function DocumentPage({
                   >
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <FileIcon
-                          size={16}
-                          style={{ color: "#5B8C2A" }}
-                        />
+                        <div
+                          className="relative cursor-pointer"
+                          onMouseEnter={(e) => handleIconHover(doc, e)}
+                          onMouseLeave={() => setHoverPreview(null)}
+                          onClick={() => isPreviewable(doc.mimeType) && setPreviewDoc(doc)}
+                        >
+                          <FileIcon
+                            size={16}
+                            style={{ color: "#5B8C2A" }}
+                          />
+                          {isPreviewable(doc.mimeType) && (
+                            <Eye
+                              size={8}
+                              className="absolute -bottom-0.5 -right-1"
+                              style={{ color: "#5B8C2A" }}
+                            />
+                          )}
+                        </div>
                         <span
                           className="text-sm font-medium truncate max-w-[300px]"
-                          style={{ color: "var(--text-primary)" }}
+                          style={{ color: "var(--text-primary)", cursor: isPreviewable(doc.mimeType) ? "pointer" : "default" }}
                           title={doc.name}
+                          onClick={() => isPreviewable(doc.mimeType) && setPreviewDoc(doc)}
                         >
                           {doc.name}
                         </span>
@@ -366,6 +395,119 @@ export default function DocumentPage({
           </tbody>
         </table>
       </div>
+
+      {/* Hover Preview Tooltip */}
+      {hoverPreview && (
+        <div
+          className="fixed z-50 rounded-lg shadow-xl border overflow-hidden pointer-events-none"
+          style={{
+            left: Math.min(hoverPreview.x, window.innerWidth - 280),
+            top: Math.max(hoverPreview.y - 60, 8),
+            background: "var(--bg-secondary)",
+            borderColor: "var(--border)",
+            width: 260,
+            maxHeight: 200,
+          }}
+        >
+          {hoverPreview.doc.mimeType.startsWith("image/") ? (
+            <img
+              src={hoverPreview.doc.fileUrl}
+              alt={hoverPreview.doc.name}
+              className="w-full h-full object-contain"
+              style={{ maxHeight: 200 }}
+            />
+          ) : hoverPreview.doc.mimeType.startsWith("video/") ? (
+            <video
+              src={hoverPreview.doc.fileUrl}
+              className="w-full"
+              style={{ maxHeight: 200 }}
+              muted
+              preload="metadata"
+            />
+          ) : hoverPreview.doc.mimeType === "application/pdf" ? (
+            <div className="flex items-center justify-center p-6">
+              <div className="text-center">
+                <FileText size={32} style={{ color: "#5B8C2A" }} className="mx-auto mb-2" />
+                <p className="text-xs" style={{ color: "var(--text-muted)" }}>Click to preview PDF</p>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      )}
+
+      {/* Full Preview Modal */}
+      {previewDoc && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70"
+          onClick={() => setPreviewDoc(null)}
+        >
+          <div
+            className="relative rounded-xl overflow-hidden shadow-2xl mx-4"
+            style={{
+              background: "var(--bg-secondary)",
+              border: "1px solid var(--border)",
+              maxWidth: "90vw",
+              maxHeight: "90vh",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div
+              className="flex items-center justify-between px-4 py-3 border-b"
+              style={{ borderColor: "var(--border)" }}
+            >
+              <span className="text-sm font-medium truncate" style={{ color: "var(--text-primary)" }}>
+                {previewDoc.name}
+              </span>
+              <div className="flex items-center gap-2">
+                <a
+                  href={previewDoc.fileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-1.5 rounded-md transition-colors"
+                  style={{ color: "#5B8C2A" }}
+                  title="Open in new tab"
+                >
+                  <Download size={16} />
+                </a>
+                <button
+                  onClick={() => setPreviewDoc(null)}
+                  className="p-1.5 rounded-md transition-colors cursor-pointer"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Content */}
+            <div className="flex items-center justify-center" style={{ maxHeight: "80vh", overflow: "auto" }}>
+              {previewDoc.mimeType.startsWith("image/") ? (
+                <img
+                  src={previewDoc.fileUrl}
+                  alt={previewDoc.name}
+                  className="max-w-full max-h-[80vh] object-contain"
+                />
+              ) : previewDoc.mimeType.startsWith("video/") ? (
+                <video
+                  src={previewDoc.fileUrl}
+                  controls
+                  autoPlay
+                  className="max-w-full max-h-[80vh]"
+                  style={{ minWidth: 500 }}
+                />
+              ) : previewDoc.mimeType === "application/pdf" ? (
+                <iframe
+                  src={previewDoc.fileUrl}
+                  className="w-full"
+                  style={{ width: "80vw", height: "80vh" }}
+                  title={previewDoc.name}
+                />
+              ) : null}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Delete Confirmation Modal */}
       {deleteDoc && (
