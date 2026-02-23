@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Users, Store, Trash2, FileText, Tag, Plus, X, Mail } from "lucide-react";
+import { ArrowLeft, Users, Store, Trash2, FileText, Tag, Plus, X, Mail, Pencil, Check } from "lucide-react";
 import StatusBadge from "@/components/StatusBadge";
 import StatsCard from "@/components/StatsCard";
 import { formatCurrency, formatMonthYear, formatNumber } from "@/lib/formatters";
@@ -53,6 +53,13 @@ export default function AgentDetailPage() {
   const [emailing, setEmailing] = useState(false);
   const [showTagDropdown, setShowTagDropdown] = useState(false);
   const [allTags, setAllTags] = useState<{ id: string; name: string; color: string }[]>([]);
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editSplit, setEditSplit] = useState("");
+  const [editStatus, setEditStatus] = useState("");
 
   useEffect(() => {
     fetch(`/api/agents/${params.id}`)
@@ -158,6 +165,44 @@ export default function AgentDetailPage() {
     }
   }
 
+  function startEditing() {
+    if (!agent) return;
+    setEditName(agent.name);
+    setEditEmail(agent.email || "");
+    setEditPhone(agent.phone || "");
+    setEditSplit(agent.splitPercent != null ? String(agent.splitPercent) : "");
+    setEditStatus(agent.status);
+    setEditing(true);
+  }
+
+  async function handleSaveProfile() {
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/agents/${params.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: editName.trim(),
+          email: editEmail.trim() || null,
+          phone: editPhone.trim() || null,
+          splitPercent: editSplit ? parseFloat(editSplit) : null,
+          status: editStatus,
+        }),
+      });
+      if (res.ok) {
+        // Refresh agent data
+        const refreshRes = await fetch(`/api/agents/${params.id}`);
+        const data = await refreshRes.json();
+        setAgent(data);
+        setEditing(false);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function fetchAllTags() {
     const res = await fetch("/api/tags");
     const data = await res.json();
@@ -226,11 +271,31 @@ export default function AgentDetailPage() {
                   {agent.phone}
                 </span>
               )}
+              {!agent.email && !agent.phone && (
+                <span className="text-sm italic" style={{ color: "var(--text-muted)" }}>
+                  No contact info —{" "}
+                  <button onClick={startEditing} className="underline cursor-pointer" style={{ color: "#5B8C2A" }}>
+                    add email
+                  </button>
+                </span>
+              )}
             </div>
           </div>
         </div>
         <div className="flex items-center gap-3">
           <StatusBadge status={agent.status} />
+          {!editing && (
+            <button
+              onClick={startEditing}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border transition-colors"
+              style={{ color: "var(--text-secondary)", borderColor: "var(--border)" }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg-tertiary)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+            >
+              <Pencil size={14} />
+              Edit
+            </button>
+          )}
           <button
             onClick={() => setShowReportModal(true)}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border transition-colors"
@@ -251,6 +316,121 @@ export default function AgentDetailPage() {
           </button>
         </div>
       </div>
+
+      {/* Edit Profile Panel */}
+      {editing && (
+        <div
+          className="rounded-xl border p-5 mb-8"
+          style={{ background: "var(--bg-secondary)", borderColor: "var(--border)" }}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+              Edit Agent Profile
+            </h2>
+            <button
+              onClick={() => setEditing(false)}
+              className="p-1 rounded cursor-pointer"
+              style={{ color: "var(--text-muted)" }}
+            >
+              <X size={16} />
+            </button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Name */}
+            <div>
+              <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--text-muted)" }}>
+                Name
+              </label>
+              <input
+                type="text"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                style={{ background: "var(--bg-primary)", border: "1px solid var(--border)", color: "var(--text-primary)" }}
+              />
+            </div>
+            {/* Email */}
+            <div>
+              <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--text-muted)" }}>
+                Email
+              </label>
+              <input
+                type="email"
+                value={editEmail}
+                onChange={(e) => setEditEmail(e.target.value)}
+                placeholder="agent@example.com"
+                className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                style={{ background: "var(--bg-primary)", border: "1px solid var(--border)", color: "var(--text-primary)" }}
+              />
+            </div>
+            {/* Phone */}
+            <div>
+              <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--text-muted)" }}>
+                Phone
+              </label>
+              <input
+                type="tel"
+                value={editPhone}
+                onChange={(e) => setEditPhone(e.target.value)}
+                placeholder="(555) 123-4567"
+                className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                style={{ background: "var(--bg-primary)", border: "1px solid var(--border)", color: "var(--text-primary)" }}
+              />
+            </div>
+            {/* Split Percent */}
+            <div>
+              <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--text-muted)" }}>
+                Split %
+              </label>
+              <input
+                type="number"
+                value={editSplit}
+                onChange={(e) => setEditSplit(e.target.value)}
+                placeholder="e.g. 50"
+                min="0"
+                max="100"
+                step="0.1"
+                className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                style={{ background: "var(--bg-primary)", border: "1px solid var(--border)", color: "var(--text-primary)" }}
+              />
+            </div>
+            {/* Status */}
+            <div>
+              <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--text-muted)" }}>
+                Status
+              </label>
+              <select
+                value={editStatus}
+                onChange={(e) => setEditStatus(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg text-sm outline-none cursor-pointer"
+                style={{ background: "var(--bg-primary)", border: "1px solid var(--border)", color: "var(--text-primary)" }}
+              >
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+          </div>
+          <div className="flex justify-end gap-3 mt-5">
+            <button
+              onClick={() => setEditing(false)}
+              className="px-4 py-2 text-sm rounded-lg border cursor-pointer transition-colors"
+              style={{ borderColor: "var(--border)", color: "var(--text-secondary)" }}
+              disabled={saving}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSaveProfile}
+              disabled={saving || !editName.trim()}
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm rounded-lg text-white cursor-pointer disabled:opacity-50 transition-colors"
+              style={{ background: "#5B8C2A" }}
+            >
+              <Check size={14} />
+              {saving ? "Saving..." : "Save Changes"}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Report Tags */}
       <div className="flex items-center gap-2 flex-wrap mb-8">
