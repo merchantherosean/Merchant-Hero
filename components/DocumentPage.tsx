@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
-import { upload } from "@vercel/blob/client";
 import {
   Upload,
   FileText,
@@ -61,32 +60,18 @@ export default function DocumentPage({
     setUploadProgress(`Uploading ${file.name}...`);
 
     try {
-      // Client-side upload directly to Vercel Blob (handles large files)
-      const blob = await upload(
-        `documents/${category}/${file.name}`,
-        file,
-        {
-          access: "public",
-          handleUploadUrl: "/api/documents/upload-token",
-        }
-      );
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("category", category);
 
-      // Save metadata to DB
       const res = await fetch("/api/documents", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: file.name,
-          category,
-          fileUrl: blob.url,
-          fileSize: file.size,
-          mimeType: file.type || "application/octet-stream",
-        }),
+        body: formData,
       });
 
       if (!res.ok) {
         const data = await res.json();
-        setError(data.error || "Failed to save document metadata");
+        setError(data.error || "Upload failed");
         return;
       }
 

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { put } from "@vercel/blob";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -19,34 +20,41 @@ export async function GET(req: Request) {
   return NextResponse.json(documents);
 }
 
-// POST /api/documents — save metadata after client-side blob upload
+// POST /api/documents — upload file to Vercel Blob + save metadata
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const { name, category, fileUrl, fileSize, mimeType } = body;
+    const formData = await req.formData();
+    const file = formData.get("file") as File | null;
+    const category = formData.get("category") as string | null;
 
-    if (!name || !category || !fileUrl) {
+    if (!file || !category) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: "Missing file or category" },
         { status: 400 }
       );
     }
 
+    // Upload to Vercel Blob
+    const blob = await put(`documents/${category}/${file.name}`, file, {
+      access: "public",
+    });
+
+    // Save metadata to database
     const document = await prisma.document.create({
       data: {
-        name,
+        name: file.name,
         category,
-        fileUrl,
-        fileSize: fileSize || 0,
-        mimeType: mimeType || "application/octet-stream",
+        fileUrl: blob.url,
+        fileSize: file.size,
+        mimeType: file.type || "application/octet-stream",
       },
     });
 
     return NextResponse.json(document, { status: 201 });
   } catch (error) {
-    console.error("Document save error:", error);
+    console.error("Document upload error:", error);
     return NextResponse.json(
-      { error: `Save failed: ${error instanceof Error ? error.message : "Unknown error"}` },
+      { error: `Upload failed: ${error instanceof Error ? error.message : "Unknown error"}` },
       { status: 500 }
     );
   }
