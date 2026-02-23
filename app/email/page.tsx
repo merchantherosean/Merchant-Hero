@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState, useCallback } from "react";
+import { Suspense, useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
   Mail,
@@ -615,12 +615,12 @@ function ComposeTab({
   const [cc, setCc] = useState("");
   const [subject, setSubject] = useState(initialSubject || "");
   const [body, setBody] = useState("");
-  const [attachment, setAttachment] = useState<{
-    base64: string;
-    fileName: string;
-  } | null>(initialAttachment || null);
+  const [attachments, setAttachments] = useState<
+    { base64: string; fileName: string }[]
+  >(initialAttachment ? [initialAttachment] : []);
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const [sending, setSending] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Sync when prefill props change (e.g. Contacts → Compose)
   useEffect(() => {
@@ -632,8 +632,35 @@ function ComposeTab({
   }, [initialSubject]);
 
   useEffect(() => {
-    setAttachment(initialAttachment || null);
+    setAttachments(initialAttachment ? [initialAttachment] : []);
   }, [initialAttachment]);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    Array.from(files).forEach((file) => {
+      // 10MB limit per file
+      if (file.size > 10 * 1024 * 1024) {
+        onError(`File "${file.name}" is too large (max 10MB)`);
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        const base64 = result.split(",")[1];
+        setAttachments((prev) => [...prev, { base64, fileName: file.name }]);
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // Reset input so the same file can be selected again
+    e.target.value = "";
+  };
+
+  const removeAttachment = (index: number) => {
+    setAttachments((prev) => prev.filter((_, i) => i !== index));
+  };
 
   const handleTemplateSelect = (templateId: string) => {
     setSelectedTemplateId(templateId);
@@ -665,15 +692,13 @@ function ComposeTab({
         body: body.trim(),
       };
 
-      // Include attachment in payload if present
-      if (attachment) {
-        payload.attachments = [
-          {
-            filename: attachment.fileName,
-            content: attachment.base64,
-            encoding: "base64",
-          },
-        ];
+      // Include attachments in payload if present
+      if (attachments.length > 0) {
+        payload.attachments = attachments.map((a) => ({
+          filename: a.fileName,
+          content: a.base64,
+          encoding: "base64",
+        }));
       }
 
       const res = await fetch("/api/email/send", {
@@ -694,7 +719,7 @@ function ComposeTab({
       setCc("");
       setSubject("");
       setBody("");
-      setAttachment(null);
+      setAttachments([]);
       setSelectedTemplateId("");
       onSuccess();
     } catch {
@@ -832,32 +857,60 @@ function ComposeTab({
           />
         </div>
 
-        {/* Attachment indicator */}
-        {attachment && (
-          <div
-            className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg"
+        {/* Attachments */}
+        <div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            className="hidden"
+            onChange={handleFileSelect}
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm cursor-pointer transition-colors"
             style={{
-              background: "rgba(91, 140, 42, 0.08)",
-              border: "1px solid rgba(91, 140, 42, 0.2)",
+              background: "var(--bg-tertiary)",
+              border: "1px solid var(--border)",
+              color: "var(--text-secondary)",
             }}
           >
-            <Paperclip size={14} style={{ color: "#5B8C2A" }} />
-            <span
-              className="text-sm flex-1 truncate font-medium"
-              style={{ color: "#5B8C2A" }}
-            >
-              {attachment.fileName}
-            </span>
-            <button
-              onClick={() => setAttachment(null)}
-              className="cursor-pointer p-0.5 rounded hover:opacity-70 transition-opacity"
-              style={{ color: "#5B8C2A" }}
-              title="Remove attachment"
-            >
-              <X size={14} />
-            </button>
-          </div>
-        )}
+            <Paperclip size={14} />
+            Attach Files
+          </button>
+
+          {attachments.length > 0 && (
+            <div className="mt-3 space-y-2">
+              {attachments.map((a, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-2.5 px-3 py-2 rounded-lg"
+                  style={{
+                    background: "rgba(91, 140, 42, 0.08)",
+                    border: "1px solid rgba(91, 140, 42, 0.2)",
+                  }}
+                >
+                  <Paperclip size={14} style={{ color: "#5B8C2A" }} />
+                  <span
+                    className="text-sm flex-1 truncate font-medium"
+                    style={{ color: "#5B8C2A" }}
+                  >
+                    {a.fileName}
+                  </span>
+                  <button
+                    onClick={() => removeAttachment(i)}
+                    className="cursor-pointer p-0.5 rounded hover:opacity-70 transition-opacity"
+                    style={{ color: "#5B8C2A" }}
+                    title="Remove attachment"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* Send Button */}
         <button
@@ -867,7 +920,11 @@ function ComposeTab({
           style={{ background: "#5B8C2A" }}
         >
           <Send size={16} />
-          {sending ? "Sending..." : attachment ? "Send Email with Attachment" : "Send Email"}
+          {sending
+            ? "Sending..."
+            : attachments.length > 0
+              ? `Send Email with ${attachments.length} Attachment${attachments.length > 1 ? "s" : ""}`
+              : "Send Email"}
         </button>
       </div>
     </div>
