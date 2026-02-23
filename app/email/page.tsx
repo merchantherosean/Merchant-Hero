@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { Suspense, useEffect, useState, useCallback } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import {
   Mail,
   Inbox,
@@ -17,6 +18,8 @@ import {
   FileText,
   RefreshCw,
   User,
+  Paperclip,
+  BookUser,
 } from "lucide-react";
 import type { SentEmailRecord, EmailTemplateRecord } from "@/lib/types";
 
@@ -30,14 +33,58 @@ interface InboxEmail {
   seen: boolean;
 }
 
-type Tab = "Inbox" | "Compose" | "Sent" | "Templates";
+interface AgentContact {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  status: string;
+}
 
+type Tab = "Inbox" | "Compose" | "Sent" | "Templates" | "Contacts";
+
+// ──────────────────────────────────────────────
+// PAGE (Suspense wrapper for useSearchParams)
+// ──────────────────────────────────────────────
 export default function EmailPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center py-20">
+          <div
+            className="text-sm animate-pulse"
+            style={{ color: "var(--text-muted)" }}
+          >
+            Loading email...
+          </div>
+        </div>
+      }
+    >
+      <EmailPageContent />
+    </Suspense>
+  );
+}
+
+// ──────────────────────────────────────────────
+// PAGE CONTENT (main layout + tab management)
+// ──────────────────────────────────────────────
+function EmailPageContent() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
   const [activeTab, setActiveTab] = useState<Tab>("Inbox");
   const [templates, setTemplates] = useState<EmailTemplateRecord[]>([]);
   const [notification, setNotification] = useState<{
     type: "success" | "error";
     message: string;
+  } | null>(null);
+
+  // Prefill state for Compose tab (from URL params or Contacts)
+  const [prefillTo, setPrefillTo] = useState("");
+  const [prefillSubject, setPrefillSubject] = useState("");
+  const [pendingAttachment, setPendingAttachment] = useState<{
+    base64: string;
+    fileName: string;
   } | null>(null);
 
   const showNotification = (type: "success" | "error", message: string) => {
@@ -55,6 +102,45 @@ export default function EmailPage() {
   useEffect(() => {
     fetchTemplates();
   }, [fetchTemplates]);
+
+  // Read URL params + sessionStorage on mount (from "Email Report" flow)
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    const to = searchParams.get("to");
+    const subject = searchParams.get("subject");
+
+    if (tab === "Compose") setActiveTab("Compose");
+    if (to) setPrefillTo(to);
+    if (subject) setPrefillSubject(subject);
+
+    // Read pending PDF attachment from sessionStorage
+    try {
+      const stored = sessionStorage.getItem("pendingEmailAttachment");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && parsed.base64 && parsed.fileName) {
+          setPendingAttachment(parsed);
+        }
+        sessionStorage.removeItem("pendingEmailAttachment");
+      }
+    } catch {
+      // Ignore parse errors
+    }
+
+    // Clean URL params after reading
+    if (tab || to || subject) {
+      router.replace("/email");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Handler for ContactsTab → compose to an agent
+  const handleComposeTo = (email: string) => {
+    setPrefillTo(email);
+    setPrefillSubject("");
+    setPendingAttachment(null);
+    setActiveTab("Compose");
+  };
 
   return (
     <div>
@@ -105,24 +191,26 @@ export default function EmailPage() {
         className="flex gap-1 mb-6 border-b"
         style={{ borderColor: "var(--border)" }}
       >
-        {(["Inbox", "Compose", "Sent", "Templates"] as Tab[]).map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className="px-4 py-2.5 text-sm font-medium cursor-pointer transition-colors"
-            style={{
-              color:
-                activeTab === tab ? "#5B8C2A" : "var(--text-secondary)",
-              borderBottom:
-                activeTab === tab
-                  ? "2px solid #5B8C2A"
-                  : "2px solid transparent",
-              marginBottom: "-1px",
-            }}
-          >
-            {tab}
-          </button>
-        ))}
+        {(["Inbox", "Compose", "Sent", "Templates", "Contacts"] as Tab[]).map(
+          (tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className="px-4 py-2.5 text-sm font-medium cursor-pointer transition-colors"
+              style={{
+                color:
+                  activeTab === tab ? "#5B8C2A" : "var(--text-secondary)",
+                borderBottom:
+                  activeTab === tab
+                    ? "2px solid #5B8C2A"
+                    : "2px solid transparent",
+                marginBottom: "-1px",
+              }}
+            >
+              {tab}
+            </button>
+          )
+        )}
       </div>
 
       {/* Tab Content */}
@@ -130,7 +218,15 @@ export default function EmailPage() {
       {activeTab === "Compose" && (
         <ComposeTab
           templates={templates}
-          onSuccess={() => showNotification("success", "Email sent successfully!")}
+          initialTo={prefillTo}
+          initialSubject={prefillSubject}
+          initialAttachment={pendingAttachment}
+          onSuccess={() => {
+            showNotification("success", "Email sent successfully!");
+            setPrefillTo("");
+            setPrefillSubject("");
+            setPendingAttachment(null);
+          }}
           onError={(msg) => showNotification("error", msg)}
         />
       )}
@@ -143,6 +239,7 @@ export default function EmailPage() {
           onError={(msg) => showNotification("error", msg)}
         />
       )}
+      {activeTab === "Contacts" && <ContactsTab onCompose={handleComposeTo} />}
     </div>
   );
 }
@@ -209,11 +306,6 @@ function InboxTab() {
     // "John Doe <john@example.com>" → "John Doe"
     const match = from.match(/^(.+?)\s*<.*>$/);
     return match ? match[1].trim() : from;
-  };
-
-  const extractEmail = (from: string) => {
-    const match = from.match(/<(.+?)>/);
-    return match ? match[1] : from;
   };
 
   const handleDelete = async (uid: number) => {
@@ -506,19 +598,42 @@ function InboxTab() {
 // ──────────────────────────────────────────────
 function ComposeTab({
   templates,
+  initialTo,
+  initialSubject,
+  initialAttachment,
   onSuccess,
   onError,
 }: {
   templates: EmailTemplateRecord[];
+  initialTo?: string;
+  initialSubject?: string;
+  initialAttachment?: { base64: string; fileName: string } | null;
   onSuccess: () => void;
   onError: (msg: string) => void;
 }) {
-  const [to, setTo] = useState("");
+  const [to, setTo] = useState(initialTo || "");
   const [cc, setCc] = useState("");
-  const [subject, setSubject] = useState("");
+  const [subject, setSubject] = useState(initialSubject || "");
   const [body, setBody] = useState("");
+  const [attachment, setAttachment] = useState<{
+    base64: string;
+    fileName: string;
+  } | null>(initialAttachment || null);
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const [sending, setSending] = useState(false);
+
+  // Sync when prefill props change (e.g. Contacts → Compose)
+  useEffect(() => {
+    if (initialTo !== undefined) setTo(initialTo);
+  }, [initialTo]);
+
+  useEffect(() => {
+    if (initialSubject !== undefined) setSubject(initialSubject);
+  }, [initialSubject]);
+
+  useEffect(() => {
+    setAttachment(initialAttachment || null);
+  }, [initialAttachment]);
 
   const handleTemplateSelect = (templateId: string) => {
     setSelectedTemplateId(templateId);
@@ -543,15 +658,28 @@ function ComposeTab({
 
     setSending(true);
     try {
+      const payload: Record<string, unknown> = {
+        to: to.trim(),
+        cc: cc.trim() || undefined,
+        subject: subject.trim(),
+        body: body.trim(),
+      };
+
+      // Include attachment in payload if present
+      if (attachment) {
+        payload.attachments = [
+          {
+            filename: attachment.fileName,
+            content: attachment.base64,
+            encoding: "base64",
+          },
+        ];
+      }
+
       const res = await fetch("/api/email/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          to: to.trim(),
-          cc: cc.trim() || undefined,
-          subject: subject.trim(),
-          body: body.trim(),
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
@@ -566,6 +694,7 @@ function ComposeTab({
       setCc("");
       setSubject("");
       setBody("");
+      setAttachment(null);
       setSelectedTemplateId("");
       onSuccess();
     } catch {
@@ -703,6 +832,33 @@ function ComposeTab({
           />
         </div>
 
+        {/* Attachment indicator */}
+        {attachment && (
+          <div
+            className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg"
+            style={{
+              background: "rgba(91, 140, 42, 0.08)",
+              border: "1px solid rgba(91, 140, 42, 0.2)",
+            }}
+          >
+            <Paperclip size={14} style={{ color: "#5B8C2A" }} />
+            <span
+              className="text-sm flex-1 truncate font-medium"
+              style={{ color: "#5B8C2A" }}
+            >
+              {attachment.fileName}
+            </span>
+            <button
+              onClick={() => setAttachment(null)}
+              className="cursor-pointer p-0.5 rounded hover:opacity-70 transition-opacity"
+              style={{ color: "#5B8C2A" }}
+              title="Remove attachment"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        )}
+
         {/* Send Button */}
         <button
           onClick={handleSend}
@@ -711,7 +867,7 @@ function ComposeTab({
           style={{ background: "#5B8C2A" }}
         >
           <Send size={16} />
-          {sending ? "Sending..." : "Send Email"}
+          {sending ? "Sending..." : attachment ? "Send Email with Attachment" : "Send Email"}
         </button>
       </div>
     </div>
@@ -1378,6 +1534,250 @@ function TemplatesTab({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────
+// CONTACTS TAB (Address Book)
+// ──────────────────────────────────────────────
+function ContactsTab({ onCompose }: { onCompose: (email: string) => void }) {
+  const [agents, setAgents] = useState<AgentContact[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    fetch("/api/agents")
+      .then((r) => r.json())
+      .then((data: AgentContact[]) => {
+        setAgents(
+          data.map((a) => ({
+            id: a.id,
+            name: a.name,
+            email: a.email || null,
+            phone: a.phone || null,
+            status: a.status || "active",
+          }))
+        );
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
+
+  const filtered = agents.filter(
+    (a) =>
+      a.name.toLowerCase().includes(search.toLowerCase()) ||
+      (a.email && a.email.toLowerCase().includes(search.toLowerCase())) ||
+      (a.phone && a.phone.includes(search))
+  );
+
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  return (
+    <div>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <BookUser size={16} style={{ color: "#5B8C2A" }} />
+          <span
+            className="text-sm font-medium"
+            style={{ color: "var(--text-primary)" }}
+          >
+            Agent Contacts
+          </span>
+          <span
+            className="text-xs"
+            style={{ color: "var(--text-muted)" }}
+          >
+            ({agents.length})
+          </span>
+        </div>
+      </div>
+
+      {/* Search */}
+      <div className="relative mb-4">
+        <Search
+          size={16}
+          className="absolute left-3 top-1/2 -translate-y-1/2"
+          style={{ color: "var(--text-muted)" }}
+        />
+        <input
+          type="text"
+          placeholder="Search by name, email, or phone..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full pl-9 pr-3 py-2.5 rounded-lg text-sm outline-none"
+          style={{
+            background: "var(--bg-secondary)",
+            border: "1px solid var(--border)",
+            color: "var(--text-primary)",
+          }}
+        />
+      </div>
+
+      {/* Table */}
+      <div
+        className="rounded-xl border overflow-hidden"
+        style={{ borderColor: "var(--border)" }}
+      >
+        <table className="w-full">
+          <thead>
+            <tr style={{ background: "var(--bg-tertiary)" }}>
+              {["Agent", "Email", "Phone", "Status", ""].map((h) => (
+                <th
+                  key={h}
+                  className="text-left text-xs font-semibold uppercase tracking-wider px-4 py-3"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr>
+                <td
+                  colSpan={5}
+                  className="px-4 py-8 text-center text-sm animate-pulse"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  Loading contacts...
+                </td>
+              </tr>
+            ) : filtered.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={5}
+                  className="px-4 py-8 text-center text-sm"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  {search
+                    ? "No contacts match your search."
+                    : "No agents found."}
+                </td>
+              </tr>
+            ) : (
+              filtered.map((agent) => (
+                <tr
+                  key={agent.id}
+                  className="border-t transition-colors"
+                  style={{ borderColor: "var(--border)" }}
+                >
+                  {/* Name with avatar */}
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-semibold"
+                        style={{
+                          background: "rgba(91, 140, 42, 0.1)",
+                          color: "#5B8C2A",
+                        }}
+                      >
+                        {getInitials(agent.name)}
+                      </div>
+                      <span
+                        className="text-sm font-medium"
+                        style={{ color: "var(--text-primary)" }}
+                      >
+                        {agent.name}
+                      </span>
+                    </div>
+                  </td>
+
+                  {/* Email */}
+                  <td className="px-4 py-3">
+                    {agent.email ? (
+                      <span
+                        className="text-sm"
+                        style={{ color: "var(--text-secondary)" }}
+                      >
+                        {agent.email}
+                      </span>
+                    ) : (
+                      <span
+                        className="text-xs italic"
+                        style={{ color: "var(--text-muted)" }}
+                      >
+                        No email
+                      </span>
+                    )}
+                  </td>
+
+                  {/* Phone */}
+                  <td className="px-4 py-3">
+                    {agent.phone ? (
+                      <span
+                        className="text-sm"
+                        style={{ color: "var(--text-secondary)" }}
+                      >
+                        {agent.phone}
+                      </span>
+                    ) : (
+                      <span
+                        className="text-xs italic"
+                        style={{ color: "var(--text-muted)" }}
+                      >
+                        —
+                      </span>
+                    )}
+                  </td>
+
+                  {/* Status */}
+                  <td className="px-4 py-3">
+                    <span
+                      className="text-xs font-medium px-2 py-1 rounded-full"
+                      style={{
+                        background:
+                          agent.status === "active"
+                            ? "rgba(91, 140, 42, 0.1)"
+                            : "rgba(239, 68, 68, 0.1)",
+                        color:
+                          agent.status === "active"
+                            ? "#5B8C2A"
+                            : "#ef4444",
+                      }}
+                    >
+                      {agent.status === "active" ? "Active" : "Inactive"}
+                    </span>
+                  </td>
+
+                  {/* Compose button */}
+                  <td className="px-4 py-3">
+                    {agent.email ? (
+                      <button
+                        onClick={() => onCompose(agent.email!)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-colors hover:opacity-80"
+                        style={{
+                          background: "rgba(91, 140, 42, 0.1)",
+                          color: "#5B8C2A",
+                        }}
+                      >
+                        <Mail size={12} />
+                        Compose
+                      </button>
+                    ) : (
+                      <span
+                        className="text-xs"
+                        style={{ color: "var(--text-muted)" }}
+                      >
+                        No email
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

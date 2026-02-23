@@ -48,7 +48,19 @@ function fmtCurrency(value: number): string {
   }).format(value);
 }
 
-export function generateAgentReport(data: ReportData): void {
+interface GenerateReportOptions {
+  download?: boolean; // defaults to true for backward compatibility
+}
+
+interface GenerateReportResult {
+  base64: string;
+  fileName: string;
+}
+
+export function generateAgentReport(
+  data: ReportData,
+  options?: GenerateReportOptions,
+): GenerateReportResult {
   const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "letter" });
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 40;
@@ -266,9 +278,15 @@ export function generateAgentReport(data: ReportData): void {
   );
 
   // ──────────────────────────────────────────────
-  // DOWNLOAD
+  // OUTPUT
   // ──────────────────────────────────────────────
   const safeName = data.agent.name.replace(/[^a-zA-Z0-9]/g, "_");
   const fileName = `${safeName}_Report_${monthName}_${data.period.year}.pdf`;
-  doc.save(fileName);
+
+  if (options?.download !== false) {
+    doc.save(fileName);
+  }
+
+  const base64 = doc.output("datauristring").split(",")[1];
+  return { base64, fileName };
 }

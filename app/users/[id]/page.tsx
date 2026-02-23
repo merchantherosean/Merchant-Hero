@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Users, Store, Trash2, FileText, Tag, Plus, X } from "lucide-react";
+import { ArrowLeft, Users, Store, Trash2, FileText, Tag, Plus, X, Mail } from "lucide-react";
 import StatusBadge from "@/components/StatusBadge";
 import StatsCard from "@/components/StatsCard";
 import { formatCurrency, formatMonthYear, formatNumber } from "@/lib/formatters";
@@ -50,6 +50,7 @@ export default function AgentDetailPage() {
   const [reportMonth, setReportMonth] = useState(new Date().getMonth() + 1);
   const [reportYear, setReportYear] = useState(new Date().getFullYear());
   const [generating, setGenerating] = useState(false);
+  const [emailing, setEmailing] = useState(false);
   const [showTagDropdown, setShowTagDropdown] = useState(false);
   const [allTags, setAllTags] = useState<{ id: string; name: string; color: string }[]>([]);
 
@@ -120,6 +121,40 @@ export default function AgentDetailPage() {
       console.error(err);
     } finally {
       setGenerating(false);
+    }
+  }
+
+  async function handleEmailReport() {
+    setEmailing(true);
+    try {
+      const res = await fetch(
+        `/api/agents/${params.id}/report?year=${reportYear}&month=${reportMonth}`
+      );
+      if (!res.ok) throw new Error("Failed to fetch report data");
+      const data = await res.json();
+      const { generateAgentReport } = await import("@/lib/generate-agent-report");
+      const result = generateAgentReport(data, { download: false });
+
+      if (result) {
+        sessionStorage.setItem(
+          "pendingEmailAttachment",
+          JSON.stringify({ base64: result.base64, fileName: result.fileName })
+        );
+      }
+
+      const monthName = MONTHS[reportMonth - 1];
+      const emailParams = new URLSearchParams({
+        tab: "Compose",
+        to: agent?.email || "",
+        subject: `Commission Report - ${monthName} ${reportYear}`,
+      });
+
+      setShowReportModal(false);
+      router.push(`/email?${emailParams.toString()}`);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setEmailing(false);
     }
   }
 
@@ -480,16 +515,26 @@ export default function AgentDetailPage() {
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setShowReportModal(false)}
-                className="px-4 py-2 text-sm rounded-lg border transition-colors"
+                className="px-4 py-2 text-sm rounded-lg border transition-colors cursor-pointer"
                 style={{ borderColor: "var(--border)", color: "var(--text-secondary)" }}
-                disabled={generating}
+                disabled={generating || emailing}
               >
                 Cancel
               </button>
               <button
+                onClick={handleEmailReport}
+                disabled={generating || emailing || !agent.email}
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm rounded-lg border transition-colors cursor-pointer disabled:opacity-50"
+                style={{ color: "#5B8C2A", borderColor: "#5B8C2A" }}
+                title={!agent.email ? "No email address on file for this agent" : "Email report to agent"}
+              >
+                <Mail size={14} />
+                {emailing ? "Preparing..." : "Email Report"}
+              </button>
+              <button
                 onClick={handleGenerateReport}
-                disabled={generating}
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm rounded-lg text-white transition-colors"
+                disabled={generating || emailing}
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm rounded-lg text-white transition-colors cursor-pointer disabled:opacity-50"
                 style={{ background: "#5B8C2A" }}
               >
                 <FileText size={14} />

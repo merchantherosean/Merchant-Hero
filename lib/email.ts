@@ -1,10 +1,17 @@
 import nodemailer from "nodemailer";
 
+interface EmailAttachment {
+  filename: string;
+  content: string; // base64 encoded
+  encoding: "base64";
+}
+
 interface SendEmailParams {
   to: string;
   cc?: string;
   subject: string;
   body: string;
+  attachments?: EmailAttachment[];
 }
 
 interface SendEmailResult {
@@ -25,7 +32,7 @@ const transporter = nodemailer.createTransport({
 });
 
 export async function sendEmail(params: SendEmailParams): Promise<SendEmailResult> {
-  const { to, cc, subject, body } = params;
+  const { to, cc, subject, body, attachments } = params;
 
   if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
     return {
@@ -41,6 +48,11 @@ export async function sendEmail(params: SendEmailParams): Promise<SendEmailResul
       cc: cc || undefined,
       subject,
       text: body,
+      attachments: attachments?.map((a) => ({
+        filename: a.filename,
+        content: a.content,
+        encoding: a.encoding as "base64",
+      })),
     });
 
     return {

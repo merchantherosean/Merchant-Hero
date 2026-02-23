@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { to, cc, subject, body: emailBody } = body;
+    const { to, cc, subject, body: emailBody, attachments } = body;
 
     if (!to || !subject) {
       return NextResponse.json(
@@ -22,6 +22,7 @@ export async function POST(req: Request) {
       cc: cc || undefined,
       subject,
       body: emailBody || "",
+      attachments: attachments || undefined,
     });
 
     // Save to database regardless of success/failure
