@@ -3,10 +3,13 @@ import { prisma } from "@/lib/prisma";
 import { sendEmail } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
+    // Read as text first to avoid default JSON body size limits
+    const rawText = await req.text();
+    const body = JSON.parse(rawText);
     const { to, cc, subject, body: emailBody, attachments } = body;
 
     if (!to || !subject) {

@@ -722,8 +722,9 @@ function ComposeTab({
       setAttachments([]);
       setSelectedTemplateId("");
       onSuccess();
-    } catch {
-      onError("Network error. Please try again.");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Network error";
+      onError(`Failed to send: ${message}. Try a smaller attachment.`);
     } finally {
       setSending(false);
     }
