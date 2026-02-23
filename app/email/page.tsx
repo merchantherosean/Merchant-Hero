@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import {
   Mail,
+  Inbox,
   Send,
   Search,
   Plus,
@@ -14,13 +15,25 @@ import {
   ChevronDown,
   ChevronUp,
   FileText,
+  RefreshCw,
+  User,
 } from "lucide-react";
 import type { SentEmailRecord, EmailTemplateRecord } from "@/lib/types";
 
-type Tab = "Compose" | "Sent" | "Templates";
+interface InboxEmail {
+  uid: number;
+  from: string;
+  to: string;
+  subject: string;
+  date: string;
+  body: string;
+  seen: boolean;
+}
+
+type Tab = "Inbox" | "Compose" | "Sent" | "Templates";
 
 export default function EmailPage() {
-  const [activeTab, setActiveTab] = useState<Tab>("Compose");
+  const [activeTab, setActiveTab] = useState<Tab>("Inbox");
   const [templates, setTemplates] = useState<EmailTemplateRecord[]>([]);
   const [notification, setNotification] = useState<{
     type: "success" | "error";
@@ -92,7 +105,7 @@ export default function EmailPage() {
         className="flex gap-1 mb-6 border-b"
         style={{ borderColor: "var(--border)" }}
       >
-        {(["Compose", "Sent", "Templates"] as Tab[]).map((tab) => (
+        {(["Inbox", "Compose", "Sent", "Templates"] as Tab[]).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -113,6 +126,7 @@ export default function EmailPage() {
       </div>
 
       {/* Tab Content */}
+      {activeTab === "Inbox" && <InboxTab />}
       {activeTab === "Compose" && (
         <ComposeTab
           templates={templates}
@@ -128,6 +142,285 @@ export default function EmailPage() {
           onSuccess={(msg) => showNotification("success", msg)}
           onError={(msg) => showNotification("error", msg)}
         />
+      )}
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────
+// INBOX TAB
+// ──────────────────────────────────────────────
+function InboxTab() {
+  const [emails, setEmails] = useState<InboxEmail[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [expandedUid, setExpandedUid] = useState<number | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const limit = 25;
+
+  const fetchInbox = useCallback(
+    (showRefresh = false) => {
+      if (showRefresh) setRefreshing(true);
+      else setLoading(true);
+
+      fetch(`/api/email/inbox?page=${page}&limit=${limit}`)
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.error) {
+            console.error("Inbox error:", data.error);
+            setEmails([]);
+            setTotal(0);
+          } else {
+            setEmails(data.emails || []);
+            setTotal(data.total || 0);
+          }
+        })
+        .catch(console.error)
+        .finally(() => {
+          setLoading(false);
+          setRefreshing(false);
+        });
+    },
+    [page]
+  );
+
+  useEffect(() => {
+    fetchInbox();
+  }, [fetchInbox]);
+
+  const totalPages = Math.ceil(total / limit);
+  const startIdx = (page - 1) * limit + 1;
+  const endIdx = Math.min(page * limit, total);
+
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  };
+
+  const extractName = (from: string) => {
+    // "John Doe <john@example.com>" → "John Doe"
+    const match = from.match(/^(.+?)\s*<.*>$/);
+    return match ? match[1].trim() : from;
+  };
+
+  const extractEmail = (from: string) => {
+    const match = from.match(/<(.+?)>/);
+    return match ? match[1] : from;
+  };
+
+  return (
+    <div>
+      {/* Header with refresh */}
+      <div className="flex items-center justify-between mb-4">
+        <span className="text-sm" style={{ color: "var(--text-muted)" }}>
+          {total > 0 ? `${total} messages` : ""}
+        </span>
+        <button
+          onClick={() => fetchInbox(true)}
+          disabled={refreshing}
+          className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium cursor-pointer transition-colors disabled:opacity-50"
+          style={{
+            background: "var(--bg-secondary)",
+            border: "1px solid var(--border)",
+            color: "var(--text-secondary)",
+          }}
+        >
+          <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
+          {refreshing ? "Refreshing..." : "Refresh"}
+        </button>
+      </div>
+
+      {/* Email List */}
+      <div
+        className="rounded-xl border overflow-hidden"
+        style={{ borderColor: "var(--border)" }}
+      >
+        {loading ? (
+          <div
+            className="px-4 py-12 text-center text-sm animate-pulse"
+            style={{ color: "var(--text-muted)" }}
+          >
+            Connecting to inbox...
+          </div>
+        ) : emails.length === 0 ? (
+          <div
+            className="px-4 py-12 text-center"
+            style={{ color: "var(--text-muted)" }}
+          >
+            <Inbox size={32} className="mx-auto mb-3 opacity-40" />
+            <p className="text-sm">No emails in inbox.</p>
+          </div>
+        ) : (
+          <div>
+            {emails.map((email, i) => (
+              <div key={email.uid}>
+                <div
+                  className="flex items-start gap-3 px-4 py-3 cursor-pointer transition-colors"
+                  style={{
+                    borderTop: i > 0 ? "1px solid var(--border)" : undefined,
+                    background:
+                      expandedUid === email.uid
+                        ? "var(--bg-tertiary)"
+                        : !email.seen
+                          ? "var(--bg-secondary)"
+                          : "transparent",
+                  }}
+                  onClick={() =>
+                    setExpandedUid(expandedUid === email.uid ? null : email.uid)
+                  }
+                >
+                  {/* Avatar */}
+                  <div
+                    className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
+                    style={{
+                      background: "rgba(91, 140, 42, 0.1)",
+                      color: "#5B8C2A",
+                    }}
+                  >
+                    <User size={14} />
+                  </div>
+
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <span
+                        className="text-sm truncate"
+                        style={{
+                          color: "var(--text-primary)",
+                          fontWeight: email.seen ? "normal" : "600",
+                        }}
+                      >
+                        {extractName(email.from)}
+                      </span>
+                      <span
+                        className="text-xs flex-shrink-0"
+                        style={{ color: "var(--text-muted)" }}
+                      >
+                        {formatDate(email.date)}
+                      </span>
+                    </div>
+                    <p
+                      className="text-sm truncate"
+                      style={{
+                        color: "var(--text-secondary)",
+                        fontWeight: email.seen ? "normal" : "500",
+                      }}
+                    >
+                      {email.subject}
+                    </p>
+                    {!expandedUid || expandedUid !== email.uid ? (
+                      <p
+                        className="text-xs truncate mt-0.5"
+                        style={{ color: "var(--text-muted)" }}
+                      >
+                        {email.body.slice(0, 120)}
+                        {email.body.length > 120 ? "..." : ""}
+                      </p>
+                    ) : null}
+                  </div>
+
+                  {/* Expand indicator */}
+                  <div className="flex-shrink-0 mt-1">
+                    {expandedUid === email.uid ? (
+                      <ChevronUp size={14} style={{ color: "var(--text-muted)" }} />
+                    ) : (
+                      <ChevronDown size={14} style={{ color: "var(--text-muted)" }} />
+                    )}
+                  </div>
+                </div>
+
+                {/* Expanded View */}
+                {expandedUid === email.uid && (
+                  <div
+                    className="px-4 pb-4 pt-1"
+                    style={{ background: "var(--bg-tertiary)" }}
+                  >
+                    <div className="ml-11">
+                      <div className="mb-3 space-y-1">
+                        <div className="text-xs" style={{ color: "var(--text-muted)" }}>
+                          <span className="font-medium">From: </span>
+                          <span style={{ color: "var(--text-secondary)" }}>
+                            {email.from}
+                          </span>
+                        </div>
+                        <div className="text-xs" style={{ color: "var(--text-muted)" }}>
+                          <span className="font-medium">To: </span>
+                          <span style={{ color: "var(--text-secondary)" }}>
+                            {email.to}
+                          </span>
+                        </div>
+                        <div className="text-xs" style={{ color: "var(--text-muted)" }}>
+                          <span className="font-medium">Date: </span>
+                          <span style={{ color: "var(--text-secondary)" }}>
+                            {formatDate(email.date)}
+                          </span>
+                        </div>
+                      </div>
+                      <div
+                        className="rounded-lg p-3 text-sm"
+                        style={{
+                          background: "var(--bg-secondary)",
+                          border: "1px solid var(--border)",
+                        }}
+                      >
+                        <pre
+                          className="whitespace-pre-wrap font-sans"
+                          style={{ color: "var(--text-secondary)" }}
+                        >
+                          {email.body || "(no content)"}
+                        </pre>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Pagination */}
+      {total > limit && (
+        <div
+          className="flex items-center justify-between mt-4 text-xs"
+          style={{ color: "var(--text-muted)" }}
+        >
+          <span>
+            Showing {startIdx}–{endIdx} of {total}
+          </span>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="px-3 py-1.5 rounded-lg cursor-pointer disabled:opacity-40 text-xs"
+              style={{
+                background: "var(--bg-secondary)",
+                border: "1px solid var(--border)",
+                color: "var(--text-secondary)",
+              }}
+            >
+              Previous
+            </button>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages}
+              className="px-3 py-1.5 rounded-lg cursor-pointer disabled:opacity-40 text-xs"
+              style={{
+                background: "var(--bg-secondary)",
+                border: "1px solid var(--border)",
+                color: "var(--text-secondary)",
+              }}
+            >
+              Next
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
