@@ -20,6 +20,7 @@ model Merchant {
   residuals    Residual[]
   tags         MerchantTag[]
   agents       MerchantAgent[]
+  notes        MerchantNote[]
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
 
@@ -121,6 +122,17 @@ model AgentTag {
 
   @@unique([agentId, tagId])
   @@index([tagId])
+}
+
+model MerchantNote {
+  id         String   @id @default(cuid())
+  merchantId String
+  merchant   Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  content    String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([merchantId])
 }
 
 model Lead {

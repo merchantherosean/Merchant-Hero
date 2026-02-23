@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Store } from "lucide-react";
+import { ArrowLeft, Store, Plus, Pencil, Trash2, X, Check, StickyNote } from "lucide-react";
 import StatusBadge from "@/components/StatusBadge";
 import { formatCurrency, formatMonthYear } from "@/lib/formatters";
 import { PROCESSOR_LABELS, type Processor } from "@/lib/types";
@@ -12,6 +12,13 @@ interface AgentInfo {
   id: string;
   name: string;
   bpsRate: number | null;
+}
+
+interface MerchantNote {
+  id: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface MerchantDetail {
@@ -40,13 +47,81 @@ export default function MerchantDetailPage() {
   const [merchant, setMerchant] = useState<MerchantDetail | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Notes state
+  const [notes, setNotes] = useState<MerchantNote[]>([]);
+  const [showAddNote, setShowAddNote] = useState(false);
+  const [newNote, setNewNote] = useState("");
+  const [savingNote, setSavingNote] = useState(false);
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState("");
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
   useEffect(() => {
     fetch(`/api/merchants/${params.id}`)
       .then((r) => r.json())
       .then(setMerchant)
       .catch(console.error)
       .finally(() => setLoading(false));
+
+    fetch(`/api/merchants/${params.id}/notes`)
+      .then((r) => r.json())
+      .then(setNotes)
+      .catch(console.error);
   }, [params.id]);
+
+  const handleAddNote = async () => {
+    if (!newNote.trim()) return;
+    setSavingNote(true);
+    try {
+      const res = await fetch(`/api/merchants/${params.id}/notes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: newNote.trim() }),
+      });
+      if (res.ok) {
+        const note = await res.json();
+        setNotes((prev) => [note, ...prev]);
+        setNewNote("");
+        setShowAddNote(false);
+      }
+    } catch (err) {
+      console.error("Failed to add note:", err);
+    } finally {
+      setSavingNote(false);
+    }
+  };
+
+  const handleEditNote = async (noteId: string) => {
+    if (!editContent.trim()) return;
+    try {
+      const res = await fetch(`/api/merchants/${params.id}/notes/${noteId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: editContent.trim() }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setNotes((prev) => prev.map((n) => (n.id === noteId ? updated : n)));
+        setEditingNoteId(null);
+      }
+    } catch (err) {
+      console.error("Failed to edit note:", err);
+    }
+  };
+
+  const handleDeleteNote = async (noteId: string) => {
+    try {
+      const res = await fetch(`/api/merchants/${params.id}/notes/${noteId}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        setNotes((prev) => prev.filter((n) => n.id !== noteId));
+        setDeleteConfirmId(null);
+      }
+    } catch (err) {
+      console.error("Failed to delete note:", err);
+    }
+  };
 
   if (loading) {
     return (
@@ -149,6 +224,205 @@ export default function MerchantDetailPage() {
           </div>
         </div>
       )}
+
+      {/* Notes */}
+      <div
+        className="rounded-xl p-6 border mb-8"
+        style={{ background: "var(--bg-secondary)", borderColor: "var(--border)" }}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <StickyNote size={16} style={{ color: "#5B8C2A" }} />
+            <h2 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+              Notes
+            </h2>
+            <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+              ({notes.length})
+            </span>
+          </div>
+          {!showAddNote && (
+            <button
+              onClick={() => setShowAddNote(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white cursor-pointer transition-colors"
+              style={{ background: "#5B8C2A" }}
+            >
+              <Plus size={14} />
+              Add Note
+            </button>
+          )}
+        </div>
+
+        {/* Add Note Form */}
+        {showAddNote && (
+          <div className="mb-4">
+            <textarea
+              value={newNote}
+              onChange={(e) => setNewNote(e.target.value)}
+              placeholder="Write a note..."
+              rows={3}
+              className="w-full px-3 py-2.5 rounded-lg text-sm outline-none resize-none mb-2"
+              style={{
+                background: "var(--bg-primary)",
+                border: "1px solid var(--border)",
+                color: "var(--text-primary)",
+              }}
+              autoFocus
+            />
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => {
+                  setShowAddNote(false);
+                  setNewNote("");
+                }}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer"
+                style={{
+                  background: "var(--bg-tertiary)",
+                  color: "var(--text-secondary)",
+                  border: "1px solid var(--border)",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddNote}
+                disabled={savingNote || !newNote.trim()}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white cursor-pointer disabled:opacity-50"
+                style={{ background: "#5B8C2A" }}
+              >
+                <Check size={12} />
+                {savingNote ? "Saving..." : "Save Note"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Notes List */}
+        {notes.length === 0 && !showAddNote ? (
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+            No notes yet. Add one to keep track of important details.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {notes.map((note) => (
+              <div
+                key={note.id}
+                className="rounded-lg p-3"
+                style={{
+                  background: "var(--bg-primary)",
+                  border: "1px solid var(--border)",
+                }}
+              >
+                {editingNoteId === note.id ? (
+                  /* Edit Mode */
+                  <div>
+                    <textarea
+                      value={editContent}
+                      onChange={(e) => setEditContent(e.target.value)}
+                      rows={3}
+                      className="w-full px-3 py-2 rounded-lg text-sm outline-none resize-none mb-2"
+                      style={{
+                        background: "var(--bg-secondary)",
+                        border: "1px solid var(--border)",
+                        color: "var(--text-primary)",
+                      }}
+                      autoFocus
+                    />
+                    <div className="flex gap-2 justify-end">
+                      <button
+                        onClick={() => setEditingNoteId(null)}
+                        className="px-2.5 py-1 rounded text-xs cursor-pointer"
+                        style={{
+                          background: "var(--bg-tertiary)",
+                          color: "var(--text-secondary)",
+                          border: "1px solid var(--border)",
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => handleEditNote(note.id)}
+                        disabled={!editContent.trim()}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium text-white cursor-pointer disabled:opacity-50"
+                        style={{ background: "#5B8C2A" }}
+                      >
+                        <Check size={10} />
+                        Save
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  /* View Mode */
+                  <div>
+                    <pre
+                      className="text-sm whitespace-pre-wrap font-sans mb-2"
+                      style={{ color: "var(--text-primary)" }}
+                    >
+                      {note.content}
+                    </pre>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px]" style={{ color: "var(--text-muted)" }}>
+                        {new Date(note.createdAt).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                          hour: "numeric",
+                          minute: "2-digit",
+                        })}
+                        {note.updatedAt !== note.createdAt && " (edited)"}
+                      </span>
+                      <div className="flex items-center gap-1">
+                        {deleteConfirmId === note.id ? (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[11px]" style={{ color: "var(--text-muted)" }}>
+                              Delete?
+                            </span>
+                            <button
+                              onClick={() => setDeleteConfirmId(null)}
+                              className="p-1 rounded cursor-pointer"
+                              style={{ color: "var(--text-muted)" }}
+                            >
+                              <X size={12} />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteNote(note.id)}
+                              className="p-1 rounded cursor-pointer"
+                              style={{ color: "#ef4444" }}
+                            >
+                              <Check size={12} />
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => {
+                                setEditingNoteId(note.id);
+                                setEditContent(note.content);
+                              }}
+                              className="p-1 rounded cursor-pointer transition-opacity hover:opacity-70"
+                              style={{ color: "var(--text-muted)" }}
+                              title="Edit"
+                            >
+                              <Pencil size={12} />
+                            </button>
+                            <button
+                              onClick={() => setDeleteConfirmId(note.id)}
+                              className="p-1 rounded cursor-pointer transition-opacity hover:opacity-70"
+                              style={{ color: "#ef4444" }}
+                              title="Delete"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Volume Chart */}
       {merchant.residuals.length > 0 && (
