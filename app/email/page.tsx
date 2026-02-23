@@ -696,27 +696,44 @@ function ComposeTab({
 
     setSending(true);
     try {
-      const payload: Record<string, unknown> = {
-        to: to.trim(),
-        cc: cc.trim() || undefined,
-        subject: subject.trim(),
-        body: body.trim(),
-      };
+      let res: Response;
 
-      // Include attachments in payload if present
       if (attachments.length > 0) {
-        payload.attachments = attachments.map((a) => ({
-          filename: a.fileName,
-          content: a.base64,
-          encoding: "base64",
-        }));
-      }
+        // Use FormData for file uploads (avoids JSON body size limits)
+        const formData = new FormData();
+        formData.append("to", to.trim());
+        if (cc.trim()) formData.append("cc", cc.trim());
+        formData.append("subject", subject.trim());
+        formData.append("body", body.trim());
 
-      const res = await fetch("/api/email/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+        for (const att of attachments) {
+          // Convert base64 back to binary File
+          const byteString = atob(att.base64);
+          const byteArray = new Uint8Array(byteString.length);
+          for (let i = 0; i < byteString.length; i++) {
+            byteArray[i] = byteString.charCodeAt(i);
+          }
+          const file = new File([byteArray], att.fileName);
+          formData.append("files", file);
+        }
+
+        res = await fetch("/api/email/send", {
+          method: "POST",
+          body: formData,
+        });
+      } else {
+        // Plain JSON for emails without attachments
+        res = await fetch("/api/email/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            to: to.trim(),
+            cc: cc.trim() || undefined,
+            subject: subject.trim(),
+            body: body.trim(),
+          }),
+        });
+      }
 
       const data = await res.json();
 

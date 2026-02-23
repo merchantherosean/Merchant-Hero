@@ -2,8 +2,8 @@ import nodemailer from "nodemailer";
 
 interface EmailAttachment {
   filename: string;
-  content: string; // base64 encoded
-  encoding: "base64";
+  content: string | Buffer;
+  encoding?: "base64";
 }
 
 interface SendEmailParams {
@@ -51,7 +51,7 @@ export async function sendEmail(params: SendEmailParams): Promise<SendEmailResul
       attachments: attachments?.map((a) => ({
         filename: a.filename,
         content: a.content,
-        encoding: a.encoding as "base64",
+        ...(a.encoding ? { encoding: a.encoding as "base64" } : {}),
       })),
     });
 
