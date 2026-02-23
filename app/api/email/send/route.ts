@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { del } from "@vercel/blob";
 import { prisma } from "@/lib/prisma";
 import { sendEmail } from "@/lib/email";
 
@@ -6,6 +7,8 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
 export async function POST(req: Request) {
+  const blobUrls: string[] = [];
+
   try {
     const rawText = await req.text();
     let body;
@@ -43,15 +46,17 @@ export async function POST(req: Request) {
       }
     }
 
-    // Build attachments from base64 data
+    // Fetch attachments from Vercel Blob URLs
     const emailAttachments: { filename: string; content: Buffer }[] = [];
     if (Array.isArray(body.attachments)) {
       for (const att of body.attachments) {
-        if (att.content && att.filename) {
-          emailAttachments.push({
-            filename: att.filename,
-            content: Buffer.from(att.content, "base64"),
-          });
+        if (att.url && att.filename) {
+          blobUrls.push(att.url);
+          const fileRes = await fetch(att.url);
+          if (fileRes.ok) {
+            const buffer = Buffer.from(await fileRes.arrayBuffer());
+            emailAttachments.push({ filename: att.filename, content: buffer });
+          }
         }
       }
     }
@@ -70,7 +75,16 @@ export async function POST(req: Request) {
         : undefined,
     });
 
-    // Save to database regardless of success/failure
+    // Clean up blob files after sending
+    for (const url of blobUrls) {
+      try {
+        await del(url);
+      } catch {
+        // Ignore cleanup errors
+      }
+    }
+
+    // Save to database
     const sentEmail = await prisma.sentEmail.create({
       data: {
         to,
@@ -91,6 +105,15 @@ export async function POST(req: Request) {
 
     return NextResponse.json(sentEmail, { status: 201 });
   } catch (error) {
+    // Clean up blobs on error too
+    for (const url of blobUrls) {
+      try {
+        await del(url);
+      } catch {
+        // Ignore cleanup errors
+      }
+    }
+
     return NextResponse.json(
       { error: (error as Error).message },
       { status: 500 }

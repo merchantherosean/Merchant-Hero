@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { upload } from "@vercel/blob/client";
 import {
   Mail,
   Inbox,
@@ -616,7 +617,7 @@ function ComposeTab({
   const [subject, setSubject] = useState(initialSubject || "");
   const [body, setBody] = useState("");
   const [attachments, setAttachments] = useState<
-    { base64: string; fileName: string }[]
+    { file: File; fileName: string }[]
   >([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const [sending, setSending] = useState(false);
@@ -631,9 +632,16 @@ function ComposeTab({
     if (initialSubject !== undefined) setSubject(initialSubject);
   }, [initialSubject]);
 
+  // Convert base64 from Email Report flow into a File object
   useEffect(() => {
     if (initialAttachment?.base64 && initialAttachment?.fileName) {
-      setAttachments([initialAttachment]);
+      const bytes = Uint8Array.from(atob(initialAttachment.base64), (c) =>
+        c.charCodeAt(0)
+      );
+      const file = new File([bytes], initialAttachment.fileName, {
+        type: "application/pdf",
+      });
+      setAttachments([{ file, fileName: initialAttachment.fileName }]);
     } else {
       setAttachments([]);
     }
@@ -644,18 +652,11 @@ function ComposeTab({
     if (!files) return;
 
     Array.from(files).forEach((file) => {
-      if (file.size > 2 * 1024 * 1024) {
-        onError(`File "${file.name}" is too large (max 2MB)`);
+      if (file.size > 20 * 1024 * 1024) {
+        onError(`File "${file.name}" is too large (max 20MB)`);
         return;
       }
-      const reader = new FileReader();
-      reader.onload = () => {
-        const dataUrl = reader.result as string;
-        const base64 = dataUrl.split(",")[1] || "";
-        setAttachments((prev) => [...prev, { base64, fileName: file.name }]);
-      };
-      reader.onerror = () => onError(`Failed to read file "${file.name}"`);
-      reader.readAsDataURL(file);
+      setAttachments((prev) => [...prev, { file, fileName: file.name }]);
     });
 
     e.target.value = "";
@@ -699,18 +700,23 @@ function ComposeTab({
 
     setSending(true);
     try {
+      // Upload attachments to Vercel Blob first (bypasses 4.5MB body limit)
+      const uploadedFiles: { filename: string; url: string }[] = [];
+      for (const att of attachments) {
+        const blob = await upload(att.fileName, att.file, {
+          access: "public",
+          handleUploadUrl: "/api/email/upload",
+        });
+        uploadedFiles.push({ filename: att.fileName, url: blob.url });
+      }
+
       const payload: Record<string, unknown> = {
         to: to.trim(),
         subject: subject.trim(),
         body: body.trim(),
       };
       if (cc.trim()) payload.cc = cc.trim();
-      if (attachments.length > 0) {
-        payload.attachments = attachments.map((a) => ({
-          filename: a.fileName,
-          content: a.base64,
-        }));
-      }
+      if (uploadedFiles.length > 0) payload.attachments = uploadedFiles;
 
       const res = await fetch("/api/email/send", {
         method: "POST",
@@ -741,7 +747,7 @@ function ComposeTab({
       onSuccess();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";
-      onError(`Network error: ${message}`);
+      onError(`Failed to send: ${message}`);
     } finally {
       setSending(false);
     }
