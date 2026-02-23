@@ -138,8 +138,31 @@ export async function GET(req: Request) {
   // Totals
   const totalVolume = merchants.reduce((s, m) => s + m.volume, 0);
   const totalNetCommission = merchants.reduce((s, m) => s + m.netCommission, 0);
-  const totalAgentPayout = merchants.reduce((s, m) => s + m.agentPayout, 0);
-  const totalMhNetProfit = merchants.reduce((s, m) => s + m.mhNetProfit, 0);
+  let totalAgentPayout = merchants.reduce((s, m) => s + m.agentPayout, 0);
+  let totalMhNetProfit = merchants.reduce((s, m) => s + m.mhNetProfit, 0);
+
+  // $75 fixed software reimbursement for specific agents (MH expense)
+  const REIMBURSEMENT_AGENTS = [
+    "playa bowl warren",
+    "playa bowl totowa",
+    "playa bowl north bergen",
+    "pb jersey city llc",
+  ];
+  const REIMBURSEMENT_AMOUNT = 75;
+
+  // Find qualifying agents in current month residuals
+  const currentAgentNames = new Set<string>();
+  for (const r of residuals) {
+    for (const ma of r.merchant.agents) {
+      currentAgentNames.add(ma.agent.name.toLowerCase());
+    }
+  }
+  const reimbursementCount = REIMBURSEMENT_AGENTS.filter((name) =>
+    currentAgentNames.has(name)
+  ).length;
+  const totalReimbursement = reimbursementCount * REIMBURSEMENT_AMOUNT;
+  totalAgentPayout += totalReimbursement;
+  totalMhNetProfit -= totalReimbursement;
 
   // Previous month totals for comparison
   let prevMonthData: { volume: number; netCommission: number; agentPayout: number; mhNetProfit: number } | null = null;
@@ -154,6 +177,20 @@ export async function GET(req: Request) {
         pAgent += r.volume * ((ma.bpsRate ?? 0) / 10000);
       }
     }
+
+    // Apply reimbursements to previous month too
+    const prevAgentNames = new Set<string>();
+    for (const r of prevResiduals) {
+      for (const ma of r.merchant.agents) {
+        prevAgentNames.add(ma.agent.name.toLowerCase());
+      }
+    }
+    const prevReimbursementCount = REIMBURSEMENT_AGENTS.filter((name) =>
+      prevAgentNames.has(name)
+    ).length;
+    const prevReimbursement = prevReimbursementCount * REIMBURSEMENT_AMOUNT;
+    pAgent += prevReimbursement;
+
     prevMonthData = {
       volume: pVol,
       netCommission: pNet,
