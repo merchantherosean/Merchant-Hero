@@ -138,6 +138,25 @@ export async function GET(
     ...individualMerchants.sort((a, b) => b.volume - a.volume),
   ];
 
+  // $75 fixed software reimbursement for specific agents
+  const REIMBURSEMENT_AGENTS = [
+    "playa bowl warren",
+    "playa bowl totowa",
+    "playa bowl north bergen",
+    "pb jersey city llc",
+  ];
+  if (REIMBURSEMENT_AGENTS.includes(agent.name.toLowerCase())) {
+    merchants.push({
+      dba: "Software Reimbursement",
+      mid: "",
+      processor: "",
+      volume: 0,
+      bpsRate: null,
+      netProfit: 75,
+      isGrouped: false,
+    } as (typeof merchants)[number]);
+  }
+
   const allVolume = merchants.reduce((s, m) => s + m.volume, 0);
   const allNetProfit = merchants.reduce((s, m) => s + m.netProfit, 0);
 
