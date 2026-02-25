@@ -87,6 +87,40 @@ export default function MerchantsPage() {
   const [bulkHidden, setBulkHidden] = useState<boolean>(true);
   const [bulkSaving, setBulkSaving] = useState(false);
 
+  // Add Location modal state
+  const [addLocationModal, setAddLocationModal] = useState(false);
+  const [newLocationName, setNewLocationName] = useState("");
+  const [newLocationProcessor, setNewLocationProcessor] = useState("");
+  const [newLocationNotes, setNewLocationNotes] = useState("");
+  const [addingLocation, setAddingLocation] = useState(false);
+
+  const handleAddLocation = async () => {
+    if (!newLocationName.trim() || !newLocationProcessor) return;
+    setAddingLocation(true);
+    try {
+      const res = await fetch("/api/merchants", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          dba: newLocationName.trim(),
+          processor: newLocationProcessor,
+          notes: newLocationNotes.trim() || undefined,
+        }),
+      });
+      if (res.ok) {
+        setAddLocationModal(false);
+        setNewLocationName("");
+        setNewLocationProcessor("");
+        setNewLocationNotes("");
+        fetchMerchants();
+      }
+    } catch (err) {
+      console.error("Failed to add location:", err);
+    } finally {
+      setAddingLocation(false);
+    }
+  };
+
   const fetchMerchants = useCallback(() => {
     setLoading(true);
     const params = new URLSearchParams();
@@ -355,6 +389,14 @@ export default function MerchantsPage() {
           <span className="text-sm" style={{ color: "var(--text-muted)" }}>
             <Store size={14} className="inline mr-1" />{merchants.length}
           </span>
+          <button
+            onClick={() => setAddLocationModal(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-white cursor-pointer transition-colors"
+            style={{ background: "#5B8C2A" }}
+          >
+            <Plus size={16} />
+            Add Location
+          </button>
         </div>
       </div>
 
@@ -783,6 +825,87 @@ export default function MerchantsPage() {
                 style={{ background: "#5B8C2A" }}>
                 {bulkSaving ? "Updating..." : bulkHidden ? "Hide Merchants" : "Show Merchants"}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Location Modal */}
+      {addLocationModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+          onClick={(e) => { if (e.target === e.currentTarget) setAddLocationModal(false); }}>
+          <div className="w-full max-w-md rounded-xl p-6 border" style={{ background: "var(--bg-primary)", borderColor: "var(--border)" }}>
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg font-semibold" style={{ color: "var(--text-primary)" }}>
+                Add Location
+              </h2>
+              <button onClick={() => setAddLocationModal(false)} className="cursor-pointer" style={{ color: "var(--text-muted)" }}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--text-secondary)" }}>
+                  Location Name <span style={{ color: "#ef4444" }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  value={newLocationName}
+                  onChange={(e) => setNewLocationName(e.target.value)}
+                  placeholder="Business name / DBA"
+                  className="w-full px-3 py-2.5 rounded-lg text-sm outline-none"
+                  style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)" }}
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--text-secondary)" }}>
+                  Processor <span style={{ color: "#ef4444" }}>*</span>
+                </label>
+                <select
+                  value={newLocationProcessor}
+                  onChange={(e) => setNewLocationProcessor(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-lg text-sm outline-none cursor-pointer"
+                  style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)" }}
+                >
+                  <option value="">Select a processor...</option>
+                  {(Object.entries(PROCESSOR_LABELS) as [Processor, string][]).map(([key, label]) => (
+                    <option key={key} value={key}>{label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--text-secondary)" }}>
+                  Notes{" "}
+                  <span className="font-normal" style={{ color: "var(--text-muted)" }}>(optional)</span>
+                </label>
+                <textarea
+                  value={newLocationNotes}
+                  onChange={(e) => setNewLocationNotes(e.target.value)}
+                  placeholder="Any important details about this location..."
+                  rows={4}
+                  className="w-full px-3 py-2.5 rounded-lg text-sm outline-none resize-none"
+                  style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)" }}
+                />
+              </div>
+              <div className="flex gap-3 pt-1">
+                <button
+                  onClick={() => setAddLocationModal(false)}
+                  className="flex-1 px-4 py-2.5 rounded-lg text-sm font-medium cursor-pointer"
+                  style={{ background: "var(--bg-tertiary)", color: "var(--text-secondary)", border: "1px solid var(--border)" }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleAddLocation}
+                  disabled={addingLocation || !newLocationName.trim() || !newLocationProcessor}
+                  className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-white cursor-pointer disabled:opacity-50"
+                  style={{ background: "#5B8C2A" }}
+                >
+                  <Plus size={16} />
+                  {addingLocation ? "Adding..." : "Add Location"}
+                </button>
+              </div>
             </div>
           </div>
         </div>

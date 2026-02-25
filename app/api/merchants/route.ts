@@ -78,13 +78,35 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   const body = await req.json();
+
+  if (!body.dba?.trim() || !body.processor?.trim()) {
+    return NextResponse.json(
+      { error: "Location name and processor are required" },
+      { status: 400 }
+    );
+  }
+
+  // Auto-generate MID if not provided (MAN-XXXXXX for manually added)
+  const mid = body.mid || `MAN-${Date.now().toString(36).toUpperCase()}`;
+
   const merchant = await prisma.merchant.create({
     data: {
-      mid: body.mid,
-      dba: body.dba,
+      mid,
+      dba: body.dba.trim(),
       processor: body.processor,
       status: body.status || "Active",
     },
   });
+
+  // Create initial note if provided
+  if (body.notes?.trim()) {
+    await prisma.merchantNote.create({
+      data: {
+        merchantId: merchant.id,
+        content: body.notes.trim(),
+      },
+    });
+  }
+
   return NextResponse.json(merchant, { status: 201 });
 }
