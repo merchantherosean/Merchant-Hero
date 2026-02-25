@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { DollarSign, Upload, CheckCircle, AlertCircle, Trash2, Plus, X, Search } from "lucide-react";
+import { DollarSign, Upload, CheckCircle, AlertCircle, Trash2, Plus, X } from "lucide-react";
 import FileUpload from "@/components/FileUpload";
 import { PROCESSOR_LABELS, PROCESSORS, MONTHS, type Processor, type UploadResponse } from "@/lib/types";
 import { formatCurrency, formatNumber } from "@/lib/formatters";
@@ -57,9 +57,7 @@ export default function ResidualsPage() {
   // Manual Entry modal state
   const [manualModal, setManualModal] = useState(false);
   const [allMerchants, setAllMerchants] = useState<MerchantOption[]>([]);
-  const [merchantSearch, setMerchantSearch] = useState("");
   const [manualMerchantId, setManualMerchantId] = useState("");
-  const [manualMerchantLabel, setManualMerchantLabel] = useState("");
   const [manualYear, setManualYear] = useState(currentDate.getFullYear());
   const [manualMonth, setManualMonth] = useState(currentDate.getMonth() + 1);
   const [manualVolume, setManualVolume] = useState("");
@@ -68,7 +66,6 @@ export default function ResidualsPage() {
   const [manualTxns, setManualTxns] = useState("");
   const [manualSaving, setManualSaving] = useState(false);
   const [manualSuccess, setManualSuccess] = useState(false);
-  const [showMerchantDropdown, setShowMerchantDropdown] = useState(false);
 
   const fetchResiduals = useCallback(() => {
     setLoading(true);
@@ -127,24 +124,22 @@ export default function ResidualsPage() {
     }
   };
 
-  const fetchMerchants = () => {
+  // Fetch merchants for manual entry dropdown
+  useEffect(() => {
     fetch("/api/merchants?showHidden=true")
       .then((r) => r.json())
       .then((data: MerchantOption[]) => setAllMerchants(data))
       .catch(console.error);
-  };
+  }, []);
 
   const openManualEntry = () => {
     setManualModal(true);
     setManualMerchantId("");
-    setManualMerchantLabel("");
-    setMerchantSearch("");
     setManualVolume("");
     setManualIncome("");
     setManualNet("");
     setManualTxns("");
     setManualSuccess(false);
-    fetchMerchants();
   };
 
   const handleManualEntry = async () => {
@@ -168,10 +163,7 @@ export default function ResidualsPage() {
       if (res.ok) {
         setManualSuccess(true);
         fetchResiduals();
-        // Reset form for another entry
         setManualMerchantId("");
-        setManualMerchantLabel("");
-        setMerchantSearch("");
         setManualVolume("");
         setManualIncome("");
         setManualNet("");
@@ -183,14 +175,6 @@ export default function ResidualsPage() {
       setManualSaving(false);
     }
   };
-
-  const filteredMerchants = merchantSearch.trim()
-    ? allMerchants.filter(
-        (m) =>
-          m.dba.toLowerCase().includes(merchantSearch.toLowerCase()) ||
-          m.mid.toLowerCase().includes(merchantSearch.toLowerCase())
-      )
-    : allMerchants;
 
   const handleDeleteUpload = async () => {
     if (!deleteUpload) return;
@@ -616,52 +600,24 @@ export default function ResidualsPage() {
             )}
 
             <div className="space-y-4">
-              {/* Location Search */}
+              {/* Location Select */}
               <div>
                 <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--text-secondary)" }}>
                   Location <span style={{ color: "#ef4444" }}>*</span>
                 </label>
-                {manualMerchantId ? (
-                  <div className="flex items-center justify-between px-3 py-2.5 rounded-lg"
-                    style={{ background: "rgba(91, 140, 42, 0.08)", border: "1px solid rgba(91, 140, 42, 0.2)" }}>
-                    <span className="text-sm font-medium" style={{ color: "#5B8C2A" }}>{manualMerchantLabel}</span>
-                    <button onClick={() => { setManualMerchantId(""); setManualMerchantLabel(""); setMerchantSearch(""); }}
-                      className="cursor-pointer" style={{ color: "#5B8C2A" }}>
-                      <X size={14} />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="relative">
-                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--text-muted)" }} />
-                    <input
-                      type="text"
-                      value={merchantSearch}
-                      onChange={(e) => { setMerchantSearch(e.target.value); setShowMerchantDropdown(true); }}
-                      onFocus={() => setShowMerchantDropdown(true)}
-                      placeholder="Search by name or MID..."
-                      className="w-full pl-9 pr-3 py-2.5 rounded-lg text-sm outline-none"
-                      style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)" }}
-                      autoFocus
-                    />
-                    {showMerchantDropdown && filteredMerchants.length > 0 && (
-                      <div className="absolute z-50 left-0 right-0 mt-1 rounded-lg border shadow-lg overflow-auto"
-                        style={{ background: "var(--bg-secondary)", borderColor: "var(--border)", maxHeight: 200 }}>
-                        {filteredMerchants.slice(0, 10).map((m) => (
-                          <div key={m.id}
-                            onMouseDown={() => {
-                              setManualMerchantId(m.id);
-                              setManualMerchantLabel(`${m.dba} (${m.mid})`);
-                              setShowMerchantDropdown(false);
-                            }}
-                            className="flex items-center justify-between px-3 py-2 cursor-pointer text-sm transition-colors hover:bg-[var(--bg-tertiary)]">
-                            <span style={{ color: "var(--text-primary)" }}>{m.dba}</span>
-                            <span className="text-xs font-mono" style={{ color: "var(--text-muted)" }}>{m.mid}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
+                <select
+                  value={manualMerchantId}
+                  onChange={(e) => setManualMerchantId(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-lg text-sm outline-none cursor-pointer"
+                  style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)" }}
+                >
+                  <option value="">Select a location...</option>
+                  {allMerchants.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.dba} — {m.mid}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* Month + Year */}
